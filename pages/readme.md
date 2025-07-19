@@ -1,0 +1,1 @@
+- Ödeme işlemleri buradan yönetilecek.

@@ -1,0 +1,1081 @@
+// =============================================================================
+// FOTOMANDALIN REZERVASYON SİSTEMİ - DATABASE SCHEMA
+// =============================================================================
+//
+// Profesyonel fotoğrafçılık rezervasyon sistemi için optimize edilmiş
+// PostgreSQL veritabanı yapısı
+//
+// Özellikler:
+// - Rezervasyon yönetimi
+// - Paket ve hizmet katalogu
+// - Müşteri yönetimi
+// - Ödeme takibi
+// - Portfolyo yönetimi
+// - Admin paneli
+//
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// KULLANICI YÖNETİMİ
+// =============================================================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String?
+  image         String?
+  phone         String?
+  password      String? // For credential-based authentication
+  role          UserRole  @default(CUSTOMER)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  accounts      Account[]
+  sessions      Session[]
+  bookings      Booking[]
+  reviews       Review[]
+  announcements Announcement[] // Admin tarafından oluşturulan duyurular
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// =============================================================================
+// HİZMET KATEGORİLERİ VE PAKETLER
+// =============================================================================
+
+model ServiceCategory {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  slug        String  @unique
+  description String?
+  image       String?
+  icon        String?
+  isActive    Boolean @default(true)
+  sortOrder   Int     @default(0)
+
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  packages Package[]
+
+  @@map("service_categories")
+}
+
+model Package {
+  id          String  @id @default(cuid())
+  name        String
+  slug        String  @unique
+  description String?
+  shortDesc   String?
+
+  // Pricing
+  basePrice     Decimal  @db.Decimal(10, 2)
+  discountPrice Decimal? @db.Decimal(10, 2)
+  currency      String   @default("TRY")
+
+  // Package Details
+  durationInMinutes Int // --> İYİLEŞTİRME: Süre her zaman olmalı, bu yüzden zorunlu (nullable değil).
+  photoCount        Int?
+  videoIncluded     Boolean @default(false)
+  albumIncluded     Boolean @default(false)
+
+  // Features (JSON field for flexible features)
+  features Json?
+
+  // Media
+  images     String[]
+  coverImage String?
+
+  // Status
+  isActive  Boolean @default(true)
+  isPopular Boolean @default(false)
+  sortOrder Int     @default(0)
+
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  categoryId String
+  category   ServiceCategory @relation(fields: [categoryId], references: [id])
+
+  bookings Booking[]
+  addOns   PackageAddOn[]
+
+  @@map("packages")
+}
+
+model AddOn {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  price       Decimal @db.Decimal(10, 2)
+  currency    String  @default("TRY")
+  isActive    Boolean @default(true)
+
+  // --> İYİLEŞTİRME: Ek hizmetlerin de bir süresi olabilir. Nullable olabilir, her ek hizmet süre eklemeyebilir.
+  durationInMinutes Int?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  packages      PackageAddOn[]
+  bookingAddOns BookingAddOn[]
+
+  @@map("add_ons")
+}
+
+model PackageAddOn {
+  id        String @id @default(cuid())
+  packageId String
+  addOnId   String
+
+  package Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  addOn   AddOn   @relation(fields: [addOnId], references: [id], onDelete: Cascade)
+
+  @@unique([packageId, addOnId])
+  @@map("package_add_ons")
+}
+
+// =============================================================================
+// LOKASYON VE PERSONEL YÖNETİMİ
+// =============================================================================
+
+model Location {
+  id          String  @id @default(cuid())
+  name        String
+  slug        String  @unique
+  description String?
+  address     String?
+
+  // Coordinates for map integration
+  latitude  Float?
+  longitude Float?
+
+  // Media
+  images     String[]
+  coverImage String?
+
+  // Pricing & Availability
+  extraFee  Decimal? @db.Decimal(10, 2) // Ek ücret varsa
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+
+  // Booking restrictions
+  maxBookingsPerDay Int?     @default(3) // Günde maksimum rezervasyon sayısı
+  workingHours      Json? // Çalışma saatleri {"start": "09:00", "end": "18:00"}
+  blackoutDates     String[] // Müsait olmayan tarihler
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  bookings Booking[]
+  staff    Staff[]
+
+  @@map("locations")
+}
+
+model Staff {
+  id     String  @id @default(cuid())
+  name   String
+  email  String  @unique
+  phone  String?
+  avatar String?
+
+  // Professional Details
+  title      String? // "Fotoğrafçı", "Asistan", "Makyöz"
+  bio        String?
+  experience Int? // Yıl cinsinden deneyim
+
+  // Availability
+  isActive Boolean @default(true)
+
+  // Specialties
+  specialties String[] // ["Portrait", "Wedding", "Event"]
+
+  // Work Schedule
+  workingHours Json? // Haftalık çalışma saatleri
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  locationId String?
+  location   Location? @relation(fields: [locationId], references: [id])
+
+  bookings          Booking[]
+  staffAvailability StaffAvailability[]
+
+  @@map("staff")
+}
+
+model StaffAvailability {
+  id      String   @id @default(cuid())
+  staffId String
+  date    DateTime @db.Date
+
+  // Time slots
+  startTime DateTime
+  endTime   DateTime
+
+  // Status
+  isAvailable Boolean @default(true)
+  reason      String? // Tatil, hastalık, izin, vb.
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, date, startTime])
+  @@map("staff_availability")
+}
+
+// =============================================================================
+// REZERVASYON YÖNETİMİ
+// =============================================================================
+
+model Booking {
+  id          String @id @default(cuid())
+  bookingCode String @unique // BK-2025-0001 formatında
+
+  // Customer Info
+  customerName  String
+  customerEmail String
+  customerPhone String
+
+  // --> İYİLEŞTİRME: Zaman yönetimi için başlangıç ve bitiş zamanlarını tek bir DateTime alanı olarak tutmak,
+  // çift rezervasyon kontrolü ve zaman dilimi yönetimi için en iyi pratiktir.
+  startTime DateTime
+  endTime   DateTime
+
+  // Booking Details
+  locationId   String?
+  location     Location? @relation(fields: [locationId], references: [id])
+  specialNotes String?
+
+  // Staff Assignment
+  staffId String?
+  staff   Staff?  @relation(fields: [staffId], references: [id])
+
+  // Package & Pricing
+  totalAmount Decimal @db.Decimal(10, 2)
+  currency    String  @default("TRY")
+
+  // Status
+  status        BookingStatus @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  packageId String
+  package   Package @relation(fields: [packageId], references: [id])
+
+  addOns   BookingAddOn[]
+  payments Payment[]
+  timeline BookingTimeline[]
+  review   Review?
+
+  // --> İYİLEŞTİRME: Başlangıç ve bitiş zamanlarına göre sorgulama performansını artırmak için index ekleyelim.
+  @@index([startTime, endTime])
+  @@index([staffId, startTime]) // Personel bazlı rezervasyon sorguları için
+  @@map("bookings")
+}
+
+model BookingAddOn {
+  id        String  @id @default(cuid())
+  bookingId String
+  addOnId   String
+  quantity  Int     @default(1)
+  price     Decimal @db.Decimal(10, 2)
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  addOn   AddOn   @relation(fields: [addOnId], references: [id])
+
+  @@unique([bookingId, addOnId])
+  @@map("booking_add_ons")
+}
+
+model BookingTimeline {
+  id          String                @id @default(cuid())
+  bookingId   String
+  action      BookingTimelineAction
+  description String?
+  metadata    Json?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+
+  // Relations
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@map("booking_timeline")
+}
+
+// =============================================================================
+// ÖDEME YÖNETİMİ
+// =============================================================================
+
+model Payment {
+  id        String @id @default(cuid())
+  bookingId String
+
+  // Payment Details
+  amount   Decimal       @db.Decimal(10, 2)
+  currency String        @default("TRY")
+  method   PaymentMethod
+  status   PaymentStatus @default(PENDING)
+
+  // Gateway Information
+  gatewayProvider  String? // "stripe", "iyzico"
+  gatewayPaymentId String?
+  gatewayResponse  Json?
+
+  // Transaction Details
+  paidAt       DateTime?
+  failedAt     DateTime?
+  refundedAt   DateTime?
+  refundAmount Decimal?  @db.Decimal(10, 2)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  booking Booking @relation(fields: [bookingId], references: [id])
+
+  @@map("payments")
+}
+
+// =============================================================================
+// İÇERİK YÖNETİMİ
+// =============================================================================
+
+model Portfolio {
+  id          String  @id @default(cuid())
+  title       String
+  slug        String  @unique
+  description String?
+
+  // Media
+  coverImage String
+  images     String[]
+
+  // Categorization
+  tags        String[]
+  isPublished Boolean  @default(false)
+  isFeatured  Boolean  @default(false)
+
+  // Event Details
+  eventDate DateTime?
+  location  String?
+
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("portfolio")
+}
+
+model Review {
+  id String @id @default(cuid())
+
+  // Review Content
+  rating  Int     @db.SmallInt // 1-5 arası
+  title   String?
+  content String
+
+  // Status
+  isPublished Boolean @default(false)
+  isVerified  Boolean @default(false)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  bookingId String  @unique
+  booking   Booking @relation(fields: [bookingId], references: [id])
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@map("reviews")
+}
+
+// =============================================================================
+// SİSTEM YÖNETİMİ VE ENTEGRASYONLAR
+// =============================================================================
+
+model SystemSettings {
+  id    String @id @default(cuid())
+  key   String @unique
+  value Json
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("system_settings")
+}
+
+// ÖDEME ENTEGRASYONLARI
+model PaymentIntegration {
+  id         String  @id @default(cuid())
+  provider   String  @unique // "iyzico", "stripe", "paytr", "payu"
+  isActive   Boolean @default(false)
+  isTestMode Boolean @default(true)
+
+  // İyzico Settings
+  iyzicoApiKey    String?
+  iyzicoSecretKey String?
+  iyzicoBaseUrl   String? // Sandbox/Production URL
+
+  // Stripe Settings
+  stripePublishableKey String?
+  stripeSecretKey      String?
+  stripeWebhookSecret  String?
+
+  // PayTR Settings
+  paytrMerchantId   String?
+  paytrMerchantKey  String?
+  paytrMerchantSalt String?
+
+  // PayU Settings
+  payuMerchantId String?
+  payuSecretKey  String?
+
+  // Common Settings
+  callbackUrl String? // Success/failure redirect URL
+  webhookUrl  String? // Webhook notification URL
+
+  // Additional Configuration
+  settings Json? // Provider özel ayarları için
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("payment_integrations")
+}
+
+// E-POSTA ENTEGRASYONLARI
+model EmailIntegration {
+  id       String  @id @default(cuid())
+  provider String  @unique // "smtp", "sendgrid", "mailgun", "ses", "resend"
+  isActive Boolean @default(false)
+
+  // SMTP Settings (Genel SMTP sunucuları için)
+  smtpHost     String?
+  smtpPort     Int?
+  smtpUsername String?
+  smtpPassword String?
+  smtpSecure   Boolean @default(true) // TLS/SSL
+
+  // SendGrid Settings
+  sendgridApiKey String?
+
+  // Mailgun Settings
+  mailgunApiKey String?
+  mailgunDomain String?
+  mailgunRegion String? @default("us") // us, eu
+
+  // Amazon SES Settings
+  sesAccessKey String?
+  sesSecretKey String?
+  sesRegion    String? @default("us-east-1")
+
+  // Resend Settings
+  resendApiKey String?
+
+  // Email Configuration
+  fromEmail String?
+  fromName  String?
+  replyTo   String?
+
+  // Template Settings
+  templates Json? // Email template IDs ve ayarları
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("email_integrations")
+}
+
+// SMS ENTEGRASYONLARI
+model SmsIntegration {
+  id       String  @id @default(cuid())
+  provider String  @unique // "netgsm", "twilio", "vonage", "iletimerkezi", "mutlucell"
+  isActive Boolean @default(false)
+
+  // NetGSM Settings (API Key based)
+  netgsmApiKey String?
+  netgsmHeader String? // SMS başlığı/gönderici adı
+
+  // Twilio Settings
+  twilioAccountSid String?
+  twilioAuthToken  String?
+  twilioFromNumber String?
+
+  // Vonage (Nexmo) Settings
+  vonageApiKey    String?
+  vonageApiSecret String?
+  vonageFromName  String?
+
+  // İletimerkezi Settings
+  imerkeziApiKey String?
+  imerkeziSender String? // Gönderici adı
+
+  // MutluCell Settings
+  mutlucellApiKey String?
+  mutlucellSender String?
+
+  // SMS Configuration
+  defaultSender String? // Varsayılan gönderici adı
+  encoding      String? @default("UTF-8") // SMS encoding
+
+  // Provider özel ayarları
+  settings Json?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("sms_integrations")
+}
+
+// SOSYAL MEDYA ENTEGRASYONLARI
+model SocialIntegration {
+  id       String  @id @default(cuid())
+  platform String  @unique // "instagram", "facebook", "whatsapp", "google", "linkedin", "tiktok"
+  isActive Boolean @default(false)
+
+  // Instagram Business API
+  instagramAccessToken  String?
+  instagramBusinessId   String?
+  instagramRefreshToken String?
+  instagramAppId        String?
+  instagramAppSecret    String?
+
+  // Facebook API
+  facebookAppId       String?
+  facebookAppSecret   String?
+  facebookPageId      String?
+  facebookAccessToken String?
+
+  // WhatsApp Business API
+  whatsappToken       String?
+  whatsappNumberId    String?
+  whatsappWebhookUrl  String?
+  whatsappVerifyToken String?
+
+  // Google APIs (Analytics, My Business, etc.)
+  googleClientId     String?
+  googleClientSecret String?
+  googleRefreshToken String?
+  googleAnalyticsId  String?
+  googleMyBusinessId String?
+
+  // LinkedIn API
+  linkedinClientId     String?
+  linkedinClientSecret String?
+  linkedinPageId       String?
+
+  // TikTok for Business
+  tiktokClientKey    String?
+  tiktokClientSecret String?
+  tiktokAdvertiserId String?
+
+  // Platform özel ayarları
+  settings Json?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("social_integrations")
+}
+
+// DEPOLAMA ENTEGRASYONLARI
+model StorageIntegration {
+  id       String  @id @default(cuid())
+  provider String  @unique // "aws_s3", "cloudinary", "azure", "gcs", "digitalocean"
+  isActive Boolean @default(false)
+
+  // AWS S3
+  awsAccessKeyId     String?
+  awsSecretAccessKey String?
+  awsRegion          String?
+  awsS3BucketName    String?
+  awsCloudFrontUrl   String?
+
+  // Cloudinary
+  cloudinaryCloudName String?
+  cloudinaryApiKey    String?
+  cloudinaryApiSecret String?
+
+  // Azure Blob Storage
+  azureAccountName   String?
+  azureAccountKey    String?
+  azureContainerName String?
+  azureEndpoint      String?
+
+  // Google Cloud Storage
+  gcsProjectId   String?
+  gcsPrivateKey  String? @db.Text // Service account private key
+  gcsClientEmail String?
+  gcsBucketName  String?
+
+  // DigitalOcean Spaces
+  doAccessKey  String?
+  doSecretKey  String?
+  doRegion     String?
+  doBucketName String?
+  doEndpoint   String?
+
+  // Genel ayarlar
+  cdnUrl       String? // CDN URL
+  uploadPath   String?  @default("/uploads") // Upload klasörü
+  maxFileSize  Int?     @default(10485760) // Max dosya boyutu (bytes)
+  allowedTypes String[] @default(["image/jpeg", "image/png", "image/webp"]) // İzin verilen dosya tipleri
+
+  // Provider özel ayarları
+  settings Json?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("storage_integrations")
+}
+
+// ANALİTİK ENTEGRASYONLARI
+model AnalyticsIntegration {
+  id       String  @id @default(cuid())
+  provider String  @unique // "google_analytics", "google_tag_manager", "mixpanel", "hotjar", "facebook_pixel", "clarity"
+  isActive Boolean @default(false)
+
+  // Google Analytics 4
+  ga4MeasurementId String?
+  ga4ApiSecret     String?
+
+  // Google Tag Manager
+  gtmContainerId String?
+
+  // Universal Analytics (Deprecated but still used)
+  gaTrackingId String?
+
+  // Mixpanel
+  mixpanelToken String?
+
+  // Hotjar
+  hotjarSiteId String?
+
+  // Microsoft Clarity
+  clarityProjectId String?
+
+  // Facebook Pixel
+  facebookPixelId     String?
+  facebookAccessToken String?
+
+  // Custom Analytics
+  customTrackingCode String? @db.Text // Özel tracking kodları
+
+  // Event Configuration
+  trackingEvents Json? // Hangi eventi track edeceğimiz
+
+  // GDPR/Cookie Compliance
+  requireConsent    Boolean  @default(true)
+  consentCategories String[] @default(["analytics"]) // Cookie kategorileri
+
+  // Provider özel ayarları
+  settings Json?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("analytics_integrations")
+}
+
+// REZERVASYON ENTEGRASYONLARI
+model BookingIntegration {
+  id       String  @id @default(cuid())
+  provider String  @unique // "google_calendar", "outlook", "apple_calendar", "zoom", "meet"
+  isActive Boolean @default(false)
+
+  // Google Calendar
+  googleClientId     String?
+  googleClientSecret String?
+  googleRefreshToken String?
+  googleCalendarId   String?
+
+  // Microsoft Outlook/365
+  outlookClientId     String?
+  outlookClientSecret String?
+  outlookTenantId     String?
+  outlookRefreshToken String?
+
+  // Apple Calendar (CalDAV)
+  appleCalendarUrl      String?
+  appleCalendarUsername String?
+  appleCalendarPassword String?
+
+  // Zoom Integration
+  zoomApiKey       String?
+  zoomApiSecret    String?
+  zoomAccountId    String?
+  zoomWebhookToken String?
+
+  // Google Meet Integration
+  meetClientId     String?
+  meetClientSecret String?
+  meetRefreshToken String?
+
+  // Sync Settings
+  syncEnabled       Boolean   @default(false)
+  syncFrequency     Int?      @default(15) // Dakika
+  lastSyncAt        DateTime?
+  autoCreateMeeting Boolean   @default(false) // Otomatik toplantı linki oluştur
+
+  // Calendar Settings
+  defaultEventDuration Int? @default(60) // Varsayılan etkinlik süresi (dakika)
+  bufferTime           Int? @default(15) // Etkinlikler arası boşluk (dakika)
+
+  // Notification Settings
+  reminderSettings Json? // Hatırlatma ayarları
+
+  // Provider özel ayarları
+  settings Json?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("booking_integrations")
+}
+
+// SİTE AYARLARI
+model SiteSettings {
+  id          String @id @default(cuid())
+  siteName    String @default("Fotomandalin")
+  siteUrl     String @default("https://fotomandalin.com")
+  description String @default("Profesyonel Fotoğrafçılık Hizmetleri")
+
+  // Contact Information
+  contactEmail   String?
+  contactPhone   String?
+  contactAddress String? @db.Text
+
+  // Social Media Links
+  instagramUrl String?
+  facebookUrl  String?
+  twitterUrl   String?
+  linkedinUrl  String?
+  youtubeUrl   String?
+
+  // Business Information
+  businessHours Json? // {"monday": {"open": "09:00", "close": "18:00"}}
+  timezone      String @default("Europe/Istanbul")
+  currency      String @default("TRY")
+  language      String @default("tr")
+
+  // SEO Settings
+  metaTitle       String?
+  metaDescription String? @db.Text
+  metaKeywords    String? @db.Text
+  favicon         String?
+  logo            String?
+
+  // Theme Settings
+  primaryColor   String @default("#000000")
+  secondaryColor String @default("#ffffff")
+  accentColor    String @default("#f59e0b")
+
+  // Feature Flags
+  maintenanceMode  Boolean @default(false)
+  registrationOpen Boolean @default(true)
+  bookingEnabled   Boolean @default(true)
+  reviewsEnabled   Boolean @default(true)
+  portfolioEnabled Boolean @default(true)
+
+  // Legal Settings
+  privacyPolicyUrl  String?
+  termsOfServiceUrl String?
+  cookiePolicyUrl   String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("site_settings")
+}
+
+// REZERVASYON ENTEGRASYONLARI VE AYARLARI
+model BookingSettings {
+  id String @id @default(cuid())
+
+  // Google Calendar Integration
+  googleCalendarApiKey  String?
+  googleCalendarId      String?
+  googleCalendarEnabled Boolean @default(false)
+
+  // Outlook Integration
+  outlookClientId     String?
+  outlookClientSecret String?
+  outlookEnabled      Boolean @default(false)
+
+  // Booking Rules
+  minimumBookingHours       Int @default(2) // Minimum rezervasyon süresi (saat)
+  maximumAdvanceBookingDays Int @default(90) // Maksimum önceden rezervasyon (gün)
+
+  // Working Hours
+  workingHoursStart String @default("09:00")
+  workingHoursEnd   String @default("18:00")
+
+  // Business Rules
+  autoConfirmBookings Boolean @default(false) // Rezervasyonları otomatik onayla
+  sendReminders       Boolean @default(true) // Rezervasyon hatırlatmaları gönder
+
+  // Buffer Settings
+  bufferTimeBefore Int @default(30) // Rezervasyon öncesi buffer (dakika)
+  bufferTimeAfter  Int @default(30) // Rezervasyon sonrası buffer (dakika)
+
+  // Cancellation Policy
+  cancellationHours Int @default(24) // İptal için minimum süre (saat)
+
+  // Additional Settings
+  settings Json? // Ek ayarlar için
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("booking_settings")
+}
+
+model AuditLog {
+  id String @id @default(cuid())
+
+  // Action Details
+  action   String
+  entity   String
+  entityId String?
+  changes  Json?
+
+  // User Info
+  userId    String?
+  userRole  UserRole?
+  ipAddress String?
+  userAgent String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+// =============================================================================
+// ENUM TANIMLARI
+// =============================================================================
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+  PHOTOGRAPHER
+}
+
+enum BookingStatus {
+  PENDING // Onay bekliyor
+  CONFIRMED // Onaylandı
+  IN_PROGRESS // Çekim devam ediyor
+  COMPLETED // Tamamlandı
+  CANCELLED // İptal edildi
+  RESCHEDULED // Ertelendi
+}
+
+enum PaymentStatus {
+  PENDING // Ödeme bekliyor
+  PAID // Ödendi
+  FAILED // Başarısız
+  REFUNDED // İade edildi
+  PARTIAL // Kısmi ödeme
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  BANK_TRANSFER
+  CASH
+  CRYPTO
+}
+
+enum BookingTimelineAction {
+  CREATED
+  CONFIRMED
+  PAYMENT_RECEIVED
+  PAYMENT_FAILED
+  RESCHEDULED
+  CANCELLED
+  COMPLETED
+  REVIEW_ADDED
+}
+
+enum ContactMessageStatus {
+  PENDING
+  REPLIED
+  RESOLVED
+}
+
+// =============================================================================
+// İLETİŞİM YÖNETİMİ
+// =============================================================================
+
+model ContactMessage {
+  id      String               @id @default(cuid())
+  name    String
+  email   String
+  phone   String
+  subject String
+  message String               @db.Text
+  status  ContactMessageStatus @default(PENDING)
+
+  // Admin response
+  adminNotes String?   @db.Text
+  repliedAt  DateTime?
+
+  // Timestamps
+  submittedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("contact_messages")
+}
+
+// =============================================================================
+// DUYURU YÖNETİMİ
+// =============================================================================
+
+model Announcement {
+  id       String           @id @default(cuid())
+  title    String // Duyuru başlığı
+  message  String           @db.Text // Duyuru mesajı
+  type     AnnouncementType @default(INFO) // Duyuru tipi
+  priority Int              @default(0) // Öncelik (yüksek numara = yüksek öncelik)
+
+  // Action button
+  actionText String? // Buton metni
+  actionLink String? // Buton linki
+
+  // Display settings
+  isActive    Boolean @default(true) // Aktif/pasif
+  dismissible Boolean @default(true) // Kapatılabilir mi
+  autoHide    Boolean @default(false) // Otomatik gizlensin mi
+  duration    Int? // Otomatik gizlenme süresi (saniye)
+
+  // Targeting
+  targetRoles UserRole[] // Hangi kullanıcı rollerine gösterilecek
+  targetPages String[] // Hangi sayfalarda gösterilecek (boşsa tümünde)
+
+  // Scheduling
+  startDate DateTime? // Başlangıç tarihi
+  endDate   DateTime? // Bitiş tarihi
+
+  // Metadata
+  createdBy String? // Oluşturan admin ID
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  creator User? @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@map("announcements")
+}
+
+enum AnnouncementType {
+  INFO // Bilgilendirme (mavi)
+  WARNING // Uyarı (sarı)
+  SUCCESS // Başarı (yeşil)
+  PROMOTION // Kampanya (gradient)
+
+  @@map("announcement_types")
+}

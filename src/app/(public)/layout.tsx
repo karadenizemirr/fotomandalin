@@ -2,6 +2,7 @@ import ConditionalNavbar from "@/components/layout/ConditionalNavbar";
 import FooterComponent from "@/components/organisms/footer/Footer";
 import Topbar from "@/components/organisms/navbar/topbar";
 import type { Metadata } from "next";
+import React from "react";
 
 // import Footer from "@/components/organisms/footer/footer"; // TODO: Footer komponenti oluşturulacak
 

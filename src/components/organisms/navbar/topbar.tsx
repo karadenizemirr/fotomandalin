@@ -29,13 +29,13 @@ interface TopbarProps {
 }
 
 export default function Topbar({
-  announcements,
-  announcement, // Single announcement for backward compatibility
-  className = "",
-  autoRotate = true,
-  rotationInterval = 5,
-  useApi = true, // Varsayılan olarak API kullan
-}: TopbarProps) {
+                                 announcements,
+                                 announcement, // Single announcement for backward compatibility
+                                 className = "",
+                                 autoRotate = true,
+                                 rotationInterval = 5,
+                                 useApi = true, // Varsayılan olarak API kullan
+                               }: TopbarProps) {
   const pathname = usePathname();
   const { data: session } = useSession();
 
@@ -45,21 +45,21 @@ export default function Topbar({
     isLoading,
     error,
   } = trpc.announcement.getActive.useQuery(
-    {
-      page: pathname || "/",
-      role: (session?.user?.role as any) || "CUSTOMER",
-    },
-    {
-      enabled: useApi, // Only fetch when useApi is true
-      refetchOnWindowFocus: false,
-      refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
-    }
+      {
+        page: pathname || "/",
+        role: (session?.user?.role as any) || "CUSTOMER",
+      },
+      {
+        enabled: useApi, // Only fetch when useApi is true
+        refetchOnWindowFocus: false,
+        refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+      }
   );
 
   const allAnnouncements = useMemo(() => {
     return useApi
-      ? apiAnnouncements || []
-      : announcements || (announcement ? [announcement] : []);
+        ? apiAnnouncements || []
+        : announcements || (announcement ? [announcement] : []);
   }, [useApi, apiAnnouncements, announcements, announcement]);
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -100,19 +100,19 @@ export default function Topbar({
     if (allAnnouncements.length === 0) return;
 
     const dismissed = allAnnouncements
-      .filter((ann) => {
-        if (ann.dismissible) {
-          return localStorage.getItem(`announcement-${ann.id}`) === "true";
-        }
-        return false;
-      })
-      .map((ann) => ann.id);
+        .filter((ann) => {
+          if (ann.dismissible) {
+            return localStorage.getItem(`announcement-${ann.id}`) === "true";
+          }
+          return false;
+        })
+        .map((ann) => ann.id);
 
     // Only update if the dismissed IDs actually changed
     setDismissedIds((prev) => {
       const hasChanged =
-        prev.length !== dismissed.length ||
-        !prev.every((id, index) => id === dismissed[index]);
+          prev.length !== dismissed.length ||
+          !prev.every((id, index) => id === dismissed[index]);
 
       return hasChanged ? dismissed : prev;
     });
@@ -121,8 +121,8 @@ export default function Topbar({
   // Reset index if current announcement is dismissed
   useEffect(() => {
     if (
-      currentIndex >= visibleAnnouncements.length &&
-      visibleAnnouncements.length > 0
+        currentIndex >= visibleAnnouncements.length &&
+        visibleAnnouncements.length > 0
     ) {
       setCurrentIndex(0);
     }
@@ -152,8 +152,8 @@ export default function Topbar({
   const handlePrevious = () => {
     if (visibleAnnouncements.length > 1) {
       setCurrentIndex(
-        (prev) =>
-          (prev - 1 + visibleAnnouncements.length) % visibleAnnouncements.length
+          (prev) =>
+              (prev - 1 + visibleAnnouncements.length) % visibleAnnouncements.length
       );
     }
   };
@@ -199,15 +199,15 @@ export default function Topbar({
 
   if (isLoading) {
     return (
-      <div className="bg-gray-100 relative z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center py-2">
-            <div className="animate-pulse text-sm text-gray-500">
-              Duyurular yükleniyor...
+        <div className="bg-gray-100 relative z-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-center py-2">
+              <div className="animate-pulse text-sm text-gray-500">
+                Duyurular yükleniyor...
+              </div>
             </div>
           </div>
         </div>
-      </div>
     );
   }
 
@@ -217,128 +217,128 @@ export default function Topbar({
   const Icon = typeStyles.icon;
 
   return (
-    <div
-      className={`
+      <div
+          className={`
         ${typeStyles.bg} ${typeStyles.text} 
         ${isAnimating ? "animate-slide-up" : "animate-slide-down"}
         relative z-50 transition-all duration-300 ease-in-out
         ${className}
       `}
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between py-2">
-          {/* Left side - Icon and Message */}
-          <div className="flex items-center space-x-2 flex-1 min-w-0">
-            <Icon className="w-4 h-4 flex-shrink-0" />
-            <p className="text-sm font-medium truncate">
-              {currentAnnouncement.message}
-            </p>
-          </div>
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between py-2">
+            {/* Left side - Icon and Message */}
+            <div className="flex items-center space-x-2 flex-1 min-w-0">
+              <Icon className="w-4 h-4 flex-shrink-0" />
+              <p className="text-sm font-medium truncate">
+                {currentAnnouncement.message}
+              </p>
+            </div>
 
-          {/* Right side - Navigation, Action and Close */}
-          <div className="flex items-center space-x-2 ml-3">
-            {/* Multiple announcement indicators */}
-            {visibleAnnouncements.length > 1 && (
-              <div className="flex items-center space-x-1">
-                <button
-                  onClick={handlePrevious}
-                  className="p-0.5 rounded hover:bg-white/20 transition-colors"
-                  aria-label="Önceki duyuru"
-                >
-                  <svg
-                    className="w-3 h-3"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </button>
-
-                <div className="flex space-x-1">
-                  {visibleAnnouncements.map((_, index) => (
+            {/* Right side - Navigation, Action and Close */}
+            <div className="flex items-center space-x-2 ml-3">
+              {/* Multiple announcement indicators */}
+              {visibleAnnouncements.length > 1 && (
+                  <div className="flex items-center space-x-1">
                     <button
-                      key={index}
-                      onClick={() => setCurrentIndex(index)}
-                      className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                        index === currentIndex ? "bg-white" : "bg-white/40"
-                      }`}
-                      aria-label={`${index + 1}. duyuruya git`}
-                    />
-                  ))}
-                </div>
+                        onClick={handlePrevious}
+                        className="p-0.5 rounded hover:bg-white/20 transition-colors"
+                        aria-label="Önceki duyuru"
+                    >
+                      <svg
+                          className="w-3 h-3"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                      >
+                        <path
+                            fillRule="evenodd"
+                            d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+                            clipRule="evenodd"
+                        />
+                      </svg>
+                    </button>
 
-                <button
-                  onClick={handleNext}
-                  className="p-0.5 rounded hover:bg-white/20 transition-colors"
-                  aria-label="Sonraki duyuru"
-                >
-                  <svg
-                    className="w-3 h-3"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </button>
-              </div>
-            )}
+                    <div className="flex space-x-1">
+                      {visibleAnnouncements.map((_, index) => (
+                          <button
+                              key={index}
+                              onClick={() => setCurrentIndex(index)}
+                              className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                                  index === currentIndex ? "bg-white" : "bg-white/40"
+                              }`}
+                              aria-label={`${index + 1}. duyuruya git`}
+                          />
+                      ))}
+                    </div>
 
-            {currentAnnouncement.actionText &&
-              currentAnnouncement.actionLink && (
-                <Link
-                  href={currentAnnouncement.actionLink}
-                  className={`
+                    <button
+                        onClick={handleNext}
+                        className="p-0.5 rounded hover:bg-white/20 transition-colors"
+                        aria-label="Sonraki duyuru"
+                    >
+                      <svg
+                          className="w-3 h-3"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                      >
+                        <path
+                            fillRule="evenodd"
+                            d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                            clipRule="evenodd"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+              )}
+
+              {currentAnnouncement.actionText &&
+                  currentAnnouncement.actionLink && (
+                      <Link
+                          href={currentAnnouncement.actionLink}
+                          className={`
                   inline-flex items-center px-2 py-1 text-xs font-semibold
                   bg-white/20 backdrop-blur-sm rounded-md
                   ${typeStyles.hoverBg} transition-colors duration-200
                   hover:bg-white/30
                 `}
-                >
-                  {currentAnnouncement.actionText}
-                </Link>
-              )}
+                      >
+                        {currentAnnouncement.actionText}
+                      </Link>
+                  )}
 
-            {currentAnnouncement?.dismissible && (
-              <button
-                onClick={() => handleDismiss()}
-                className={`
+              {currentAnnouncement?.dismissible && (
+                  <button
+                      onClick={() => handleDismiss()}
+                      className={`
                   p-0.5 rounded-md transition-colors duration-200
                   hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50
                 `}
-                aria-label="Duyuruyu kapat"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            )}
+                      aria-label="Duyuruyu kapat"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Animated border bottom */}
-      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/30">
-        <div
-          className="h-full bg-white/60 transition-all duration-300 ease-out"
-          style={{
-            width:
-              currentAnnouncement.autoHide && currentAnnouncement.duration
-                ? "0%"
-                : "100%",
-            transitionDuration:
-              currentAnnouncement.autoHide && currentAnnouncement.duration
-                ? `${currentAnnouncement.duration}s`
-                : "300ms",
-          }}
-        />
+        {/* Animated border bottom */}
+        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/30">
+          <div
+              className="h-full bg-white/60 transition-all duration-300 ease-out"
+              style={{
+                width:
+                    currentAnnouncement.autoHide && currentAnnouncement.duration
+                        ? "0%"
+                        : "100%",
+                transitionDuration:
+                    currentAnnouncement.autoHide && currentAnnouncement.duration
+                        ? `${currentAnnouncement.duration}s`
+                        : "300ms",
+              }}
+          />
+        </div>
       </div>
-    </div>
   );
 }
 

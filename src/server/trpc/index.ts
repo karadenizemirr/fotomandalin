@@ -55,9 +55,9 @@ export const t = initTRPC.context<Context>().create({
       data: {
         ...shape.data,
         zodError:
-          error.cause instanceof Error && error.cause.name === 'ZodError'
-            ? error.cause
-            : null,
+            error.cause instanceof Error && error.cause.name === 'ZodError'
+                ? error.cause
+                : null,
       },
     };
   },

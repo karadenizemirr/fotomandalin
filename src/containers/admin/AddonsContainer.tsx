@@ -33,17 +33,17 @@ import {
 // Memoized Icon Component - Performance optimizasyonu için
 const AddonIcon = ({ isActive }: { isActive?: boolean }) => {
   return (
-    <div
-      className={`w-12 h-12 rounded-lg flex items-center justify-center border border-gray-200 ${
-        isActive
-          ? "bg-gradient-to-br from-blue-100 to-blue-200"
-          : "bg-gradient-to-br from-gray-100 to-gray-200"
-      }`}
-    >
-      <Puzzle
-        className={`w-6 h-6 ${isActive ? "text-blue-600" : "text-gray-400"}`}
-      />
-    </div>
+      <div
+          className={`w-12 h-12 rounded-lg flex items-center justify-center border border-gray-200 ${
+              isActive
+                  ? "bg-gradient-to-br from-blue-100 to-blue-200"
+                  : "bg-gradient-to-br from-gray-100 to-gray-200"
+          }`}
+      >
+        <Puzzle
+            className={`w-6 h-6 ${isActive ? "text-blue-600" : "text-gray-400"}`}
+        />
+      </div>
   );
 };
 
@@ -219,12 +219,12 @@ export default function AddonsContainer() {
       ...data,
       price: Number(data.price) || 0,
       durationInMinutes: data.durationInMinutes
-        ? Number(data.durationInMinutes)
-        : undefined,
-      description:
-        data.description && data.description.trim()
-          ? data.description.trim()
+          ? Number(data.durationInMinutes)
           : undefined,
+      description:
+          data.description && data.description.trim()
+              ? data.description.trim()
+              : undefined,
     };
 
     if (editingAddOn) {
@@ -247,9 +247,9 @@ export default function AddonsContainer() {
         name: editingAddOn.name,
         description: editingAddOn.description || "",
         price:
-          typeof editingAddOn.price === "string"
-            ? parseFloat(editingAddOn.price)
-            : editingAddOn.price,
+            typeof editingAddOn.price === "string"
+                ? parseFloat(editingAddOn.price)
+                : editingAddOn.price,
         currency: editingAddOn.currency,
         isActive: editingAddOn.isActive,
         durationInMinutes: editingAddOn.durationInMinutes || undefined,
@@ -267,115 +267,115 @@ export default function AddonsContainer() {
 
   // Table columns
   const columns = useMemo(
-    () => [
-      {
-        key: "icon",
-        title: "",
-        width: 60,
-        render: (_value: any, record: AddOnTableData) => (
-          <AddonIcon isActive={record.isActive} />
-        ),
-      },
-      {
-        key: "name",
-        title: "Ek Hizmet Bilgileri",
-        dataIndex: "name",
-        sortable: true,
-        render: (value: string, record: AddOnTableData) => (
-          <div>
-            <div className="font-medium text-black">{value}</div>
-            {record.description && (
-              <div className="text-sm text-gray-600 mt-1 line-clamp-2">
-                {record.description}
-              </div>
-            )}
-          </div>
-        ),
-      },
-      {
-        key: "price",
-        title: "Fiyat & Süre",
-        render: (value: any, record: AddOnTableData) => {
-          const price =
-            typeof record.price === "string"
-              ? parseFloat(record.price)
-              : record.price;
-
-          return (
-            <div>
-              <div className="font-medium text-black flex items-center">
-                <DollarSign className="w-4 h-4 mr-1 text-green-600" />
-                {price} {record.currency}
-              </div>
-              {record.durationInMinutes && (
-                <div className="text-sm text-gray-600 flex items-center mt-1">
-                  <Clock className="w-3 h-3 mr-1" />
-                  {record.durationInMinutes} dakika
-                </div>
-              )}
-            </div>
-          );
+      () => [
+        {
+          key: "icon",
+          title: "",
+          width: 60,
+          render: (_value: any, record: AddOnTableData) => (
+              <AddonIcon isActive={record.isActive} />
+          ),
         },
-      },
-      {
-        key: "packages",
-        title: "Paketler",
-        render: (value: any, record: AddOnTableData) => (
-          <div>
-            <div className="font-medium text-black flex items-center">
-              <Package className="w-4 h-4 mr-1 text-orange-400" />
-              {record.packages.length} Paket
-            </div>
-            {record.packages.length > 0 && (
-              <div className="text-sm text-gray-600 mt-1">
-                {record.packages.slice(0, 2).map((pkg) => (
-                  <div key={pkg.package.id} className="text-xs">
-                    {pkg.package.name}
-                  </div>
-                ))}
-                {record.packages.length > 2 && (
-                  <div className="text-xs text-gray-500">
-                    +{record.packages.length - 2} daha...
-                  </div>
+        {
+          key: "name",
+          title: "Ek Hizmet Bilgileri",
+          dataIndex: "name",
+          sortable: true,
+          render: (value: string, record: AddOnTableData) => (
+              <div>
+                <div className="font-medium text-black">{value}</div>
+                {record.description && (
+                    <div className="text-sm text-gray-600 mt-1 line-clamp-2">
+                      {record.description}
+                    </div>
                 )}
               </div>
-            )}
-          </div>
-        ),
-      },
-      {
-        key: "status",
-        title: "Durum",
-        render: (value: any, record: AddOnTableData) => (
-          <div className="flex items-center gap-2">
-            {record.isActive ? (
-              <ToggleRight className="w-5 h-5 text-green-600" />
-            ) : (
-              <ToggleLeft className="w-5 h-5 text-gray-400" />
-            )}
-            <span
-              className={`text-sm font-medium ${
-                record.isActive ? "text-green-600" : "text-gray-500"
-              }`}
-            >
+          ),
+        },
+        {
+          key: "price",
+          title: "Fiyat & Süre",
+          render: (value: any, record: AddOnTableData) => {
+            const price =
+                typeof record.price === "string"
+                    ? parseFloat(record.price)
+                    : record.price;
+
+            return (
+                <div>
+                  <div className="font-medium text-black flex items-center">
+                    <DollarSign className="w-4 h-4 mr-1 text-green-600" />
+                    {price} {record.currency}
+                  </div>
+                  {record.durationInMinutes && (
+                      <div className="text-sm text-gray-600 flex items-center mt-1">
+                        <Clock className="w-3 h-3 mr-1" />
+                        {record.durationInMinutes} dakika
+                      </div>
+                  )}
+                </div>
+            );
+          },
+        },
+        {
+          key: "packages",
+          title: "Paketler",
+          render: (value: any, record: AddOnTableData) => (
+              <div>
+                <div className="font-medium text-black flex items-center">
+                  <Package className="w-4 h-4 mr-1 text-orange-400" />
+                  {record.packages.length} Paket
+                </div>
+                {record.packages.length > 0 && (
+                    <div className="text-sm text-gray-600 mt-1">
+                      {record.packages.slice(0, 2).map((pkg) => (
+                          <div key={pkg.package.id} className="text-xs">
+                            {pkg.package.name}
+                          </div>
+                      ))}
+                      {record.packages.length > 2 && (
+                          <div className="text-xs text-gray-500">
+                            +{record.packages.length - 2} daha...
+                          </div>
+                      )}
+                    </div>
+                )}
+              </div>
+          ),
+        },
+        {
+          key: "status",
+          title: "Durum",
+          render: (value: any, record: AddOnTableData) => (
+              <div className="flex items-center gap-2">
+                {record.isActive ? (
+                    <ToggleRight className="w-5 h-5 text-green-600" />
+                ) : (
+                    <ToggleLeft className="w-5 h-5 text-gray-400" />
+                )}
+                <span
+                    className={`text-sm font-medium ${
+                        record.isActive ? "text-green-600" : "text-gray-500"
+                    }`}
+                >
               {record.isActive ? "Aktif" : "Pasif"}
             </span>
-          </div>
-        ),
-      },
-      {
-        key: "createdAt",
-        title: "Oluşturulma",
-        dataIndex: "createdAt",
-        sortable: true,
-        render: (value: Date | string) => (
-          <span className="text-black">
+              </div>
+          ),
+        },
+        {
+          key: "createdAt",
+          title: "Oluşturulma",
+          dataIndex: "createdAt",
+          sortable: true,
+          render: (value: Date | string) => (
+              <span className="text-black">
             {new Date(value).toLocaleDateString("tr-TR")}
           </span>
-        ),
-      },
-    ],
-    []
+          ),
+        },
+      ],
+      []
   );
 
   // Table actions
@@ -428,271 +428,271 @@ export default function AddonsContainer() {
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-black">
-              Ek Hizmet Yönetimi
-            </h1>
-            <p className="text-black mt-1">
-              Paketlere eklenebilecek ek hizmetleri görüntüleyin ve yönetin
-            </p>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold text-black">
+                Ek Hizmet Yönetimi
+              </h1>
+              <p className="text-black mt-1">
+                Paketlere eklenebilecek ek hizmetleri görüntüleyin ve yönetin
+              </p>
+            </div>
+            <div className="mt-4 lg:mt-0 flex flex-col sm:flex-row gap-3">
+              <button
+                  onClick={() => refetch()}
+                  className="inline-flex items-center px-4 py-2 border border-gray-200 text-sm font-medium rounded-md text-black bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Yenile
+              </button>
+              <button
+                  onClick={() => setIsModalOpen(true)}
+                  className="inline-flex items-center px-4 py-2 bg-orange-400 text-white text-sm font-medium rounded-md hover:bg-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Yeni Ek Hizmet
+              </button>
+            </div>
           </div>
-          <div className="mt-4 lg:mt-0 flex flex-col sm:flex-row gap-3">
-            <button
-              onClick={() => refetch()}
-              className="inline-flex items-center px-4 py-2 border border-gray-200 text-sm font-medium rounded-md text-black bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Yenile
-            </button>
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="inline-flex items-center px-4 py-2 bg-orange-400 text-white text-sm font-medium rounded-md hover:bg-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Yeni Ek Hizmet
-            </button>
-          </div>
-        </div>
 
-        {/* Stats */}
-        {addOnStats && (
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mt-6">
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <Puzzle className="h-8 w-8 text-blue-600" />
+          {/* Stats */}
+          {addOnStats && (
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mt-6">
+                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <Puzzle className="h-8 w-8 text-blue-600" />
+                    </div>
+                    <div className="ml-5 w-0 flex-1">
+                      <dl>
+                        <dt className="text-sm font-medium text-black truncate">
+                          Toplam Ek Hizmet
+                        </dt>
+                        <dd className="text-lg font-medium text-black">
+                          {addOnStats.total}
+                        </dd>
+                      </dl>
+                    </div>
+                  </div>
                 </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-black truncate">
-                      Toplam Ek Hizmet
-                    </dt>
-                    <dd className="text-lg font-medium text-black">
-                      {addOnStats.total}
-                    </dd>
-                  </dl>
+                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <ToggleRight className="h-8 w-8 text-green-600" />
+                    </div>
+                    <div className="ml-5 w-0 flex-1">
+                      <dl>
+                        <dt className="text-sm font-medium text-black truncate">
+                          Aktif
+                        </dt>
+                        <dd className="text-lg font-medium text-black">
+                          {addOnStats.active}
+                        </dd>
+                      </dl>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <ToggleLeft className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <div className="ml-5 w-0 flex-1">
+                      <dl>
+                        <dt className="text-sm font-medium text-black truncate">
+                          Pasif
+                        </dt>
+                        <dd className="text-lg font-medium text-black">
+                          {addOnStats.inactive}
+                        </dd>
+                      </dl>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <DollarSign className="h-8 w-8 text-green-600" />
+                    </div>
+                    <div className="ml-5 w-0 flex-1">
+                      <dl>
+                        <dt className="text-sm font-medium text-black truncate">
+                          Ort. Fiyat
+                        </dt>
+                        <dd className="text-lg font-medium text-black">
+                          {addOnStats.averagePrice.toFixed(0)} ₺
+                        </dd>
+                      </dl>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <TrendingUp className="h-8 w-8 text-orange-400" />
+                    </div>
+                    <div className="ml-5 w-0 flex-1">
+                      <dl>
+                        <dt className="text-sm font-medium text-black truncate">
+                          En Popüler
+                        </dt>
+                        <dd className="text-lg font-medium text-black">
+                          {addOnStats.mostUsed[0]?.name || "Yok"}
+                        </dd>
+                      </dl>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <ToggleRight className="h-8 w-8 text-green-600" />
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-black truncate">
-                      Aktif
-                    </dt>
-                    <dd className="text-lg font-medium text-black">
-                      {addOnStats.active}
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <ToggleLeft className="h-8 w-8 text-gray-400" />
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-black truncate">
-                      Pasif
-                    </dt>
-                    <dd className="text-lg font-medium text-black">
-                      {addOnStats.inactive}
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <DollarSign className="h-8 w-8 text-green-600" />
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-black truncate">
-                      Ort. Fiyat
-                    </dt>
-                    <dd className="text-lg font-medium text-black">
-                      {addOnStats.averagePrice.toFixed(0)} ₺
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <TrendingUp className="h-8 w-8 text-orange-400" />
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-black truncate">
-                      En Popüler
-                    </dt>
-                    <dd className="text-lg font-medium text-black">
-                      {addOnStats.mostUsed[0]?.name || "Yok"}
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+          )}
 
-        {/* Filters */}
-        <div className="mt-6 flex items-center">
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              checked={filters.includeInactive}
-              onChange={(e) =>
-                setFilters({ ...filters, includeInactive: e.target.checked })
-              }
-              className="h-4 w-4 text-orange-400 focus:ring-orange-400 border-gray-200 rounded"
-            />
-            <span className="ml-2 text-sm text-black">
+          {/* Filters */}
+          <div className="mt-6 flex items-center">
+            <label className="flex items-center">
+              <input
+                  type="checkbox"
+                  checked={filters.includeInactive}
+                  onChange={(e) =>
+                      setFilters({ ...filters, includeInactive: e.target.checked })
+                  }
+                  className="h-4 w-4 text-orange-400 focus:ring-orange-400 border-gray-200 rounded"
+              />
+              <span className="ml-2 text-sm text-black">
               Pasif ek hizmetleri göster
             </span>
-          </label>
+            </label>
+          </div>
         </div>
-      </div>
 
-      {/* Data Table */}
-      <div className="bg-white rounded-lg border border-gray-200">
-        <DataTable
-          data={addOnsData?.items || []}
-          columns={columns}
-          loading={isLoading}
-          actions={actions}
-          selection={{
-            type: "checkbox",
-            selectedRowKeys: selectedAddOns,
-            onChange: (keys) => setSelectedAddOns(keys as string[]),
-          }}
-          rowKey="id"
-          className="border-0"
-          searchable={false}
-        />
-      </div>
+        {/* Data Table */}
+        <div className="bg-white rounded-lg border border-gray-200">
+          <DataTable
+              data={addOnsData?.items || []}
+              columns={columns}
+              loading={isLoading}
+              actions={actions}
+              selection={{
+                type: "checkbox",
+                selectedRowKeys: selectedAddOns,
+                onChange: (keys) => setSelectedAddOns(keys as string[]),
+              }}
+              rowKey="id"
+              className="border-0"
+              searchable={false}
+          />
+        </div>
 
-      {/* Form Dialog for Create/Edit AddOn */}
-      <Dialog
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        title={editingAddOn ? "Ek Hizmet Düzenle" : "Yeni Ek Hizmet"}
-        size="lg"
-      >
-        <Form
-          schema={editingAddOn ? addOnUpdateSchema : addOnCreateSchema}
-          defaultValues={getDefaultValues()}
-          onSubmit={handleFormSubmit}
+        {/* Form Dialog for Create/Edit AddOn */}
+        <Dialog
+            isOpen={isModalOpen}
+            onClose={handleCloseModal}
+            title={editingAddOn ? "Ek Hizmet Düzenle" : "Yeni Ek Hizmet"}
+            size="lg"
         >
-          <div className="space-y-6">
-            {/* Basic Information */}
-            <div className="grid grid-cols-1 gap-4">
-              <TextField
-                name="name"
-                label="Ek Hizmet Adı"
-                placeholder="Ek Fotoğraf Çekimi"
-                required
-              />
-              <TextareaField
-                name="description"
-                label="Açıklama"
-                placeholder="Ek hizmet hakkında detaylı bilgi..."
-                rows={3}
-              />
-            </div>
+          <Form
+              schema={editingAddOn ? addOnUpdateSchema : addOnCreateSchema}
+              defaultValues={getDefaultValues()}
+              onSubmit={handleFormSubmit}
+          >
+            <div className="space-y-6">
+              {/* Basic Information */}
+              <div className="grid grid-cols-1 gap-4">
+                <TextField
+                    name="name"
+                    label="Ek Hizmet Adı"
+                    placeholder="Ek Fotoğraf Çekimi"
+                    required
+                />
+                <TextareaField
+                    name="description"
+                    label="Açıklama"
+                    placeholder="Ek hizmet hakkında detaylı bilgi..."
+                    rows={3}
+                />
+              </div>
 
-            {/* Pricing & Duration */}
-            <div className="border-t border-gray-200 pt-6">
-              <h3 className="text-lg font-medium text-black mb-4">
-                Fiyat ve Süre
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <NumberField
-                  name="price"
-                  label="Fiyat"
-                  placeholder="0"
-                  min={0}
-                  step={0.01}
-                  required
-                />
-                <SelectField
-                  name="currency"
-                  label="Para Birimi"
-                  options={currencyOptions}
-                  required
-                />
-                <NumberField
-                  name="durationInMinutes"
-                  label="Süre (Dakika)"
-                  placeholder="30"
-                  min={1}
-                  step={1}
-                />
+              {/* Pricing & Duration */}
+              <div className="border-t border-gray-200 pt-6">
+                <h3 className="text-lg font-medium text-black mb-4">
+                  Fiyat ve Süre
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <NumberField
+                      name="price"
+                      label="Fiyat"
+                      placeholder="0"
+                      min={0}
+                      step={0.01}
+                      required
+                  />
+                  <SelectField
+                      name="currency"
+                      label="Para Birimi"
+                      options={currencyOptions}
+                      required
+                  />
+                  <NumberField
+                      name="durationInMinutes"
+                      label="Süre (Dakika)"
+                      placeholder="30"
+                      min={1}
+                      step={1}
+                  />
+                </div>
+              </div>
+
+              {/* Status */}
+              <div className="border-t border-gray-200 pt-6">
+                <h3 className="text-lg font-medium text-black mb-4">Durum</h3>
+                <CheckboxField name="isActive" label="Aktif" />
               </div>
             </div>
 
-            {/* Status */}
-            <div className="border-t border-gray-200 pt-6">
-              <h3 className="text-lg font-medium text-black mb-4">Durum</h3>
-              <CheckboxField name="isActive" label="Aktif" />
+            <div className="flex justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
+              <button
+                  type="button"
+                  onClick={handleCloseModal}
+                  disabled={
+                      createAddOnMutation.isPending || updateAddOnMutation.isPending
+                  }
+                  className="px-4 py-2 text-black bg-white border border-gray-200 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50 transition-colors duration-200"
+              >
+                İptal
+              </button>
+              <button
+                  type="submit"
+                  disabled={
+                      createAddOnMutation.isPending || updateAddOnMutation.isPending
+                  }
+                  className="px-4 py-2 bg-orange-400 text-white rounded-md hover:bg-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50 transition-colors duration-200"
+              >
+                {createAddOnMutation.isPending || updateAddOnMutation.isPending
+                    ? "Kaydediliyor..."
+                    : editingAddOn
+                        ? "Güncelle"
+                        : "Oluştur"}
+              </button>
             </div>
-          </div>
+          </Form>
+        </Dialog>
 
-          <div className="flex justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={handleCloseModal}
-              disabled={
-                createAddOnMutation.isPending || updateAddOnMutation.isPending
-              }
-              className="px-4 py-2 text-black bg-white border border-gray-200 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50 transition-colors duration-200"
-            >
-              İptal
-            </button>
-            <button
-              type="submit"
-              disabled={
-                createAddOnMutation.isPending || updateAddOnMutation.isPending
-              }
-              className="px-4 py-2 bg-orange-400 text-white rounded-md hover:bg-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50 transition-colors duration-200"
-            >
-              {createAddOnMutation.isPending || updateAddOnMutation.isPending
-                ? "Kaydediliyor..."
-                : editingAddOn
-                ? "Güncelle"
-                : "Oluştur"}
-            </button>
-          </div>
-        </Form>
-      </Dialog>
-
-      {/* Confirm Dialog for Delete AddOn */}
-      <ConfirmDialog
-        isOpen={deleteConfirm.isOpen}
-        onClose={() =>
-          setDeleteConfirm({ isOpen: false, addOnId: "", addOnName: "" })
-        }
-        onConfirm={() => handleDeleteAddOn(deleteConfirm.addOnId)}
-        title="Ek Hizmet Sil"
-        description={`"${deleteConfirm.addOnName}" ek hizmetini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`}
-        confirmText="Sil"
-        cancelText="İptal"
-        type="error"
-        loading={deleteAddOnMutation.isPending}
-      />
-    </div>
+        {/* Confirm Dialog for Delete AddOn */}
+        <ConfirmDialog
+            isOpen={deleteConfirm.isOpen}
+            onClose={() =>
+                setDeleteConfirm({ isOpen: false, addOnId: "", addOnName: "" })
+            }
+            onConfirm={() => handleDeleteAddOn(deleteConfirm.addOnId)}
+            title="Ek Hizmet Sil"
+            description={`"${deleteConfirm.addOnName}" ek hizmetini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`}
+            confirmText="Sil"
+            cancelText="İptal"
+            type="error"
+            loading={deleteAddOnMutation.isPending}
+        />
+      </div>
   );
 }

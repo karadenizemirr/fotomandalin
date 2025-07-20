@@ -24,7 +24,14 @@ import CommentsComponent from "@/components/organisms/comments/Comments";
 import { trpc } from "@/components/providers/trpcProvider";
 import CTA from "@/components/atoms/cta";
 
-export default function HomeContainer() {
+export default function HomeContainer({
+    categoriesData,
+    categoriesLoading,
+    categoriesError,
+    portfolioData,
+    portfolioIsLoading
+
+}: any) {
   const fadeInUp = {
     hidden: { opacity: 0, y: 60 },
     visible: { opacity: 1, y: 0 },
@@ -40,16 +47,6 @@ export default function HomeContainer() {
       },
     },
   };
-
-  // Fetch service categories from API
-  const {
-    data: categoriesData,
-    isLoading: categoriesLoading,
-    error: categoriesError,
-  } = trpc.serviceCategory.list.useQuery({
-    includeInactive: false,
-    limit: 8, // Limit to 8 categories for homepage
-  });
 
   // Helper function to get appropriate icon for each category
   const getDefaultIcon = (categoryName: string) => {
@@ -110,7 +107,8 @@ export default function HomeContainer() {
   return (
       <div className="min-h-screen bg-white">
         {/* Hero Section */}
-        <Hero />
+
+        <Hero portfolioData={portfolioData} portfolioIsLoading={portfolioIsLoading} />
 
         {/* Services Section */}
         <section className="py-20 bg-gray-50">
@@ -176,7 +174,7 @@ export default function HomeContainer() {
                   </div>
               ) : categoriesData?.items && categoriesData.items.length > 0 ? (
                   // Actual data
-                  categoriesData.items.slice(0, 4).map((category, index) => {
+                  categoriesData.items.slice(0, 4).map((category:any, index:any) => {
                     const IconComponent = getDefaultIcon(category.name);
                     const packageCount = category._count?.packages || 0;
 

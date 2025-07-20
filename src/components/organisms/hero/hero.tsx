@@ -10,20 +10,11 @@ import Image from "next/image";
 import { useRef, useState, useEffect } from "react";
 import { trpc } from "@/components/providers/trpcProvider";
 
-export default function HeroComponent() {
+export default function HeroComponent({portfolioItems, portfolioIsLoading}: any) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-50px" });
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isSliderPlaying, setIsSliderPlaying] = useState(true);
-
-  // TRPC kullanarak öne çıkarılan portfolio öğelerini çek
-  const { data: portfolioItems, isLoading } = trpc.portfolio.featured.useQuery(
-    { limit: 6 }, // Maksimum 6 öne çıkarılan öğe
-    {
-      refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000, // 5 dakika cache
-    }
-  );
 
   // Yedek statik veriler (API'den veri gelmediğinde kullanılacak)
   const fallbackImages = [
@@ -82,7 +73,7 @@ export default function HeroComponent() {
   }));
 
   // Kullanılacak görsel verisi - gerçek veri varsa onu kullan, yoksa fallback
-  const displayImages = !isLoading && portfolioItems && portfolioItems.length > 0
+  const displayImages = !portfolioIsLoading && portfolioItems && portfolioItems.length > 0
     ? normalizePortfolioData(portfolioItems)
     : normalizedFallbackImages;
 

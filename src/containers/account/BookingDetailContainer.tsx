@@ -21,6 +21,19 @@ import {
   Shield,
 } from "lucide-react";
 import Link from "next/link";
+import type { Decimal } from "@prisma/client/runtime/library";
+
+// Decimal utility function
+const formatDecimal = (
+  value: Decimal | string | number | null | undefined
+): string => {
+  if (!value) return "0";
+  if (typeof value === "string" || typeof value === "number") {
+    return parseFloat(value.toString()).toLocaleString();
+  }
+  // Prisma Decimal type
+  return parseFloat(value.toString()).toLocaleString();
+};
 
 export default function BookingDetailContainer({
   bookingId,
@@ -318,7 +331,7 @@ export default function BookingDetailContainer({
                         </div>
                       </div>
                       <p className="font-bold text-gray-900">
-                        ₺{parseFloat(addOn.price).toLocaleString()}
+                        ₺{formatDecimal(addOn.price)}
                       </p>
                     </div>
                   ))}
@@ -336,9 +349,7 @@ export default function BookingDetailContainer({
                   <span className="text-gray-600">Paket Ücreti</span>
                   <span className="font-medium">
                     ₺
-                    {parseFloat(
-                      booking.package?.basePrice || "0"
-                    ).toLocaleString()}
+                    {formatDecimal(booking.package?.basePrice)}
                   </span>
                 </div>
 
@@ -364,7 +375,7 @@ export default function BookingDetailContainer({
                       Toplam Tutar
                     </span>
                     <span className="text-lg font-bold text-gray-900">
-                      ₺{parseFloat(booking.totalAmount).toLocaleString()}
+                      ₺{formatDecimal(booking.totalAmount)}
                     </span>
                   </div>
                 </div>

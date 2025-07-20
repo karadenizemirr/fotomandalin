@@ -6,6 +6,7 @@ import { SessionProvider } from "@/components/providers/sessionProvider";
 import { ToastProvider } from "@/components/ui/toast";
 import { SiteSettingsProvider } from "@/contexts/SiteSettingsContext";
 import { siteConfig } from "@/lib/metadata";
+import React from "react";
 
 
 const geistSans = Geist({

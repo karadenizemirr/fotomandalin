@@ -7,6 +7,8 @@ import { ToastProvider } from "@/components/ui/toast";
 import { SiteSettingsProvider } from "@/contexts/SiteSettingsContext";
 import { siteConfig } from "@/lib/metadata";
 
+
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],

@@ -113,4 +113,4 @@ const isAdmin = middleware(async ({ ctx, next }) => {
 
 // Protected procedures
 export const protectedProcedure = publicProcedure.use(isAuthed);
-export const adminProcedure = publicProcedure.use(isAdmin); 
+export const adminProcedure = publicProcedure.use(isAdmin);

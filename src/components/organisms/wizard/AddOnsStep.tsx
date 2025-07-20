@@ -3,11 +3,22 @@ import { Plus, CheckCircle, Clock, Info } from "lucide-react";
 interface AddOn {
   id: string;
   name: string;
-  description?: string;
+  description?: string | null; // null değeri de kabul edecek şekilde güncellendi
   price: number | string;
   isActive: boolean;
-  durationInMinutes?: number;
+  durationInMinutes?: number | null; // null değeri de kabul edecek şekilde güncellendi
+  currency?: string;
   features?: string[];
+  createdAt?: string;
+  updatedAt?: string;
+  packages?: Array<{
+    package: {
+      id: string;
+      name: string;
+      slug: string;
+      isActive: boolean;
+    };
+  }>;
 }
 
 interface AddOnsStepProps {
@@ -33,14 +44,14 @@ export default function AddOnsStep({
 
   const calculateAddOnsTotal = () => {
     return selectedAddOns.reduce((total: number, addOnId: string) => {
-      const addOn = addOns.find((a: any) => a.id === addOnId);
+      const addOn = addOns.find((a: AddOn) => a.id === addOnId);
       return total + (addOn ? parseFloat(addOn.price.toString()) : 0);
     }, 0);
   };
 
   const calculateAddOnsTotalDuration = () => {
     return selectedAddOns.reduce((total: number, addOnId: string) => {
-      const addOn = addOns.find((a: any) => a.id === addOnId);
+      const addOn = addOns.find((a: AddOn) => a.id === addOnId);
       return total + (addOn ? addOn.durationInMinutes || 30 : 0);
     }, 0);
   };

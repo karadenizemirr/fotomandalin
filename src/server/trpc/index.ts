@@ -1,12 +1,9 @@
 import { initTRPC, TRPCError } from '@trpc/server';
 import { getServerSession } from "next-auth/next";
-import { PrismaClient } from '@prisma/client';
 import type { NextRequest } from 'next/server';
 import type { Session } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-
-// Prisma client instance
-export const prisma = new PrismaClient();
+import { prisma } from '@/server/prisma/client';
 
 // Extend the Session type
 interface ExtendedSession extends Session {
@@ -24,7 +21,7 @@ interface ExtendedSession extends Session {
 // Context interface
 export interface Context {
   session: ExtendedSession | null;
-  prisma: PrismaClient;
+  prisma: typeof prisma;
   req?: NextRequest;
 }
 
@@ -67,7 +64,7 @@ export const createTRPCRouter = t.router;
 export const router = t.router;
 export const middleware = t.middleware;
 
-// Base procedure
+// Simple base procedure without complex middleware
 export const publicProcedure = t.procedure;
 
 // Auth middleware
@@ -111,6 +108,6 @@ const isAdmin = middleware(async ({ ctx, next }) => {
   });
 });
 
-// Protected procedures
+// Protected procedures - sadece auth kontrolü
 export const protectedProcedure = publicProcedure.use(isAuthed);
 export const adminProcedure = publicProcedure.use(isAdmin);

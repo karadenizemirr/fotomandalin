@@ -8,7 +8,6 @@ import { SiteSettingsProvider } from "@/contexts/SiteSettingsContext";
 import { siteConfig } from "@/lib/metadata";
 
 
-
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -57,11 +56,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="tr">
+    <html lang="tr" className="scroll-smooth">
       <TrpcProvider>
         <SessionProvider>
           <SiteSettingsProvider>
@@ -69,6 +68,7 @@ export default function RootLayout({
               className={`${geistSans.variable} ${geistMono.variable} antialiased`}
             >
               <ToastProvider position="top-right">{children}</ToastProvider>
+
             </body>
           </SiteSettingsProvider>
         </SessionProvider>

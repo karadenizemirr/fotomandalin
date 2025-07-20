@@ -1,3 +1,4 @@
+import { t } from '../index';
 import { router } from '../index';
 import { userRouter } from './user';
 import { serviceCategoryRouter } from './serviceCategory';
@@ -14,7 +15,9 @@ import { staffRouter } from './staff';
 import { contactRouter } from './contact';
 import { announcementRouter } from './announcement';
 
-export const appRouter = router({
+
+
+export const appRouter = t.router({
     user: userRouter,
     serviceCategory: serviceCategoryRouter,
     package: packageRouter,

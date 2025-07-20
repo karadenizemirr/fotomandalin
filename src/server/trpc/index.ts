@@ -28,17 +28,21 @@ export interface Context {
 // Create context function
 export const createContext = async (opts: { req?: NextRequest }): Promise<Context> => {
   let session = null;
-  
+
   try {
-    // Get session from NextAuth
-    session = await getServerSession(authOptions) as ExtendedSession | null;
+    // Get session from NextAuth - only if we have headers (avoid unnecessary calls)
+    if (opts.req?.headers) {
+      session = await getServerSession(authOptions) as ExtendedSession | null;
+    }
   } catch (error) {
     console.error('Error getting session:', error);
+    // Don't throw, just continue with null session for public routes
   }
 
+  // Return context with shared prisma instance
   return {
     session,
-    prisma,
+    prisma, // This uses the singleton instance
     req: opts.req,
   };
 };
@@ -75,7 +79,7 @@ const isAuthed = middleware(async ({ ctx, next }) => {
       message: 'Giriş yapmanız gerekiyor',
     });
   }
-  
+
   return next({
     ctx: {
       ...ctx,
@@ -99,7 +103,7 @@ const isAdmin = middleware(async ({ ctx, next }) => {
       message: 'Bu işlem için admin yetkisi gerekiyor',
     });
   }
-  
+
   return next({
     ctx: {
       ...ctx,

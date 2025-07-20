@@ -78,7 +78,7 @@ export default function AdminSidebar({
   };
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: "/admin/login" });
+    await signOut({ callbackUrl: "/" });
   };
 
   const sidebarItems: SidebarItem[] = [
@@ -183,14 +183,14 @@ export default function AdminSidebar({
           key: "reports",
           label: "Raporlar",
           icon: <BarChart3 className="w-4 h-4" />,
-          href: "/analytics/reports",
+          href: "/analytics/report",
           description: "Detaylı raporlar",
         },
         {
           key: "insights",
           label: "İçgörüler",
           icon: <Zap className="w-4 h-4" />,
-          href: "/analytics/insights",
+          href: "/analytics/insight",
           description: "AI destekli analiz",
           isPro: true,
         },

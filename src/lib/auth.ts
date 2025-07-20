@@ -248,8 +248,8 @@ export const authOptions: AuthOptions = {
   },
 
   pages: {
-    signIn: "/auth/login",
-    error: "/auth/error",
+    signIn: "/",
+    error: "/",
   },
 
   events: {

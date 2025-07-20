@@ -97,7 +97,7 @@ function PaymentSuccessContent() {
             </h2>
             <p className="text-gray-600 mb-6">{error}</p>
             <button
-                onClick={() => router.push("/booking")}
+                onClick={() => router.push("/rezervasyon")}
                 className="w-full bg-orange-500 text-white py-2 px-4 rounded-lg hover:bg-orange-600 transition-colors"
             >
               Tekrar Dene

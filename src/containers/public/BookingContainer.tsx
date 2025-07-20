@@ -34,10 +34,9 @@ import { ConfirmationStep } from "@/components/organisms/wizard/ConfitmationSetp
 enum BookingStep {
   PACKAGE_SELECTION = 0,
   DATE_TIME = 1,
-  CUSTOMER_INFO = 2,
-  ADD_ONS = 3,
-  PAYMENT = 4,
-  CONFIRMATION = 5,
+  ADD_ONS = 2,
+  PAYMENT = 3,
+  CONFIRMATION = 4,
 }
 
 // Form data type
@@ -272,23 +271,6 @@ export default function BookingContainer() {
           return false;
         }
 
-        return true;
-
-      case BookingStep.CUSTOMER_INFO:
-        if (!formData.customerName || formData.customerName.length < 2)
-          return false;
-        if (
-          !formData.customerEmail ||
-          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.customerEmail)
-        )
-          return false;
-        if (
-          !formData.customerPhone ||
-          !/^(\+90|0)?[5][0-9]{9}$/.test(
-            formData.customerPhone.replace(/\s/g, "")
-          )
-        )
-          return false;
         return true;
 
       case BookingStep.ADD_ONS:

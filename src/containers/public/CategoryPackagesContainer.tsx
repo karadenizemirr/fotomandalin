@@ -37,6 +37,20 @@ export default function CategoryPackagesContainer({
   const [searchTerm, setSearchTerm] = useState("");
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 50000]);
 
+  // S3 URL format helper function
+  const formatImageUrl = (url: string | null | undefined): string | null => {
+    if (!url) return null;
+
+    // Eğer URL zaten tam bir HTTP URL ise, olduğu gibi döndür
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+      return url;
+    }
+
+    // BASE_URL ile birleştir
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
+    return `${baseUrl}${url.startsWith("/") ? url : `/${url}`}`;
+  };
+
   // Fetch category details
   const {
     data: categoryData,
@@ -297,120 +311,144 @@ export default function CategoryPackagesContainer({
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {filteredPackages.map((pkg: any) => (
-              <div
-                key={pkg.id}
-                className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100"
-              >
-                {/* Package Image */}
-                <div className="relative h-64 bg-gray-100 overflow-hidden">
-                  {pkg.coverImage || pkg.images?.[0] ? (
-                    <Image
-                      src={pkg.coverImage || pkg.images[0]}
-                      alt={pkg.name}
-                      fill
-                      className="object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full">
-                      <Camera className="w-12 h-12 text-gray-300" />
-                    </div>
-                  )}
+            {filteredPackages.map((pkg: any, index: number) => {
+              // S3 URL formatını kontrol et ve düzelt
+              const formattedCoverImage = formatImageUrl(pkg.coverImage);
+              const formattedFirstImage = pkg.images?.[0] ? formatImageUrl(pkg.images[0]) : null;
+              const imageToShow = formattedCoverImage || formattedFirstImage;
 
-                  {/* Badges */}
-                  <div className="absolute top-4 left-4 flex flex-col gap-2">
-                    {pkg.isPopular && (
-                      <div className="flex items-center space-x-1 bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium">
-                        <Star className="w-3 h-3" />
-                        <span>Popüler</span>
+              // İlk 4 paket (above-the-fold) için priority=true
+              const isPriorityImage = index < 4;
+
+              return (
+                <div
+                  key={pkg.id}
+                  className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100"
+                >
+                  {/* Package Image */}
+                  <div className="relative h-64 bg-gray-100 overflow-hidden">
+                    {imageToShow ? (
+                      <Image
+                        src={imageToShow}
+                        alt={pkg.name}
+                        fill
+                        priority={isPriorityImage}
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        onError={(e) => {
+                          console.error(`Failed to load image for package ${pkg.name}:`, imageToShow);
+                          // Fallback to placeholder on error
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <Camera className="w-12 h-12 text-gray-300" />
                       </div>
                     )}
-                    {pkg.discountPrice && (
-                      <div className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-                        %{getDiscountPercentage(pkg.basePrice, pkg.discountPrice)} İndirim
-                      </div>
-                    )}
-                  </div>
 
-                  {/* Action Buttons */}
-                  <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="w-10 h-10 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-sm">
-                      <Heart className="w-5 h-5 text-gray-700" />
-                    </button>
-                    <button className="w-10 h-10 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-sm">
-                      <Share2 className="w-5 h-5 text-gray-700" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Package Content */}
-                <div className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-black transition-colors">
-                        {pkg.name}
-                      </h3>
-                      {pkg.shortDesc && (
-                        <p className="text-gray-600 text-sm leading-relaxed line-clamp-2">
-                          {pkg.shortDesc}
-                        </p>
+                    {/* Badges */}
+                    <div className="absolute top-4 left-4 flex flex-col gap-2">
+                      {pkg.isPopular && (
+                        <div className="flex items-center space-x-1 bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium">
+                          <Star className="w-3 h-3" />
+                          <span>Popüler</span>
+                        </div>
+                      )}
+                      {pkg.discountPrice && (
+                        <div className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium">
+                          %{getDiscountPercentage(pkg.basePrice, pkg.discountPrice)} İndirim
+                        </div>
                       )}
                     </div>
-                  </div>
 
-                  {/* Package Features */}
-                  <div className="flex flex-wrap gap-2 mb-6">
-                    <div className="flex items-center text-xs bg-gray-50 text-gray-700 px-3 py-1 rounded-full">
-                      <Clock className="w-3 h-3 mr-1" />
-                      {formatDuration(pkg.durationInMinutes)}
+                    {/* Action Buttons */}
+                    <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        className="w-10 h-10 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-sm"
+                        aria-label={`${pkg.name} paketini favorilere ekle`}
+                      >
+                        <Heart className="w-5 h-5 text-gray-700" />
+                      </button>
+                      <button
+                        className="w-10 h-10 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-sm"
+                        aria-label={`${pkg.name} paketini paylaş`}
+                      >
+                        <Share2 className="w-5 h-5 text-gray-700" />
+                      </button>
                     </div>
-                    {pkg.photoCount && (
-                      <div className="flex items-center text-xs bg-gray-50 text-gray-700 px-3 py-1 rounded-full">
-                        <Camera className="w-3 h-3 mr-1" />
-                        {pkg.photoCount} fotoğraf
-                      </div>
-                    )}
-                    {pkg.videoIncluded && (
-                      <div className="flex items-center text-xs bg-blue-50 text-blue-700 px-3 py-1 rounded-full">
-                        <Play className="w-3 h-3 mr-1" />
-                        Video
-                      </div>
-                    )}
-                    {pkg.albumIncluded && (
-                      <div className="flex items-center text-xs bg-green-50 text-green-700 px-3 py-1 rounded-full">
-                        <ImageIcon className="w-3 h-3 mr-1" />
-                        Albüm
-                      </div>
-                    )}
                   </div>
 
-                  {/* Price and CTA */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="flex items-baseline space-x-2">
-                        <span className="text-2xl font-bold text-gray-900">
-                          {formatPrice(pkg.discountPrice || pkg.basePrice)}
-                        </span>
-                        {pkg.discountPrice && (
-                          <span className="text-sm text-gray-500 line-through">
-                            {formatPrice(pkg.basePrice)}
-                          </span>
+                  {/* Package Content */}
+                  <div className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-black transition-colors">
+                          {pkg.name}
+                        </h3>
+                        {pkg.shortDesc && (
+                          <p className="text-gray-600 text-sm leading-relaxed line-clamp-2">
+                            {pkg.shortDesc}
+                          </p>
                         )}
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">Başlangıç fiyatı</p>
                     </div>
 
-                    <Link
-                      href={`/rezervasyon?paket=${pkg.slug}`}
-                      className="flex items-center space-x-2 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
-                    >
-                      <span>Rezervasyon Yap</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </Link>
+                    {/* Package Features */}
+                    <div className="flex flex-wrap gap-2 mb-6">
+                      <div className="flex items-center text-xs bg-gray-50 text-gray-700 px-3 py-1 rounded-full">
+                        <Clock className="w-3 h-3 mr-1" />
+                        {formatDuration(pkg.durationInMinutes)}
+                      </div>
+                      {pkg.photoCount && (
+                        <div className="flex items-center text-xs bg-gray-50 text-gray-700 px-3 py-1 rounded-full">
+                          <Camera className="w-3 h-3 mr-1" />
+                          {pkg.photoCount} fotoğraf
+                        </div>
+                      )}
+                      {pkg.videoIncluded && (
+                        <div className="flex items-center text-xs bg-blue-50 text-blue-700 px-3 py-1 rounded-full">
+                          <Play className="w-3 h-3 mr-1" />
+                          Video
+                        </div>
+                      )}
+                      {pkg.albumIncluded && (
+                        <div className="flex items-center text-xs bg-green-50 text-green-700 px-3 py-1 rounded-full">
+                          <ImageIcon className="w-3 h-3 mr-1" />
+                          Albüm
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Price and CTA */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="flex items-baseline space-x-2">
+                          <span className="text-2xl font-bold text-gray-900">
+                            {formatPrice(pkg.discountPrice || pkg.basePrice)}
+                          </span>
+                          {pkg.discountPrice && (
+                            <span className="text-sm text-gray-500 line-through">
+                              {formatPrice(pkg.basePrice)}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">Başlangıç fiyatı</p>
+                      </div>
+
+                      <Link
+                        href={`/rezervasyon?paket=${pkg.slug}`}
+                        className="flex items-center space-x-2 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
+                      >
+                        <span>Rezervasyon Yap</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </Link>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

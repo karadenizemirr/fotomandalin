@@ -1,0 +1,26 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowCORSAccess",
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": "s3:GetObject",
+      "Resource": [
+        "arn:aws:s3:::fotomandalin/*",
+        "arn:aws:s3:eu-north-1:668567157984:accesspoint/accessfotomandalin/object/*"
+      ],
+      "Condition": {
+        "StringLike": {
+          "aws:Referer": [
+            "https://fotomandalin.com/*",
+            "https://www.fotomandalin.com/*",
+            "https://fotomandalin.vercel.app/*",
+            "http://localhost:3000/*"
+          ]
+        }
+      }
+    }
+  ]
+}
+

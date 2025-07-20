@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { z } from "zod";
 import { trpc } from "@/components/providers/trpcProvider";
 import { useToast } from "@/components/ui/toast";
@@ -29,6 +29,23 @@ import {
   Copy,
   TrendingUp,
 } from "lucide-react";
+
+// Memoized Icon Component - Performance optimizasyonu için
+const AddonIcon = ({ isActive }: { isActive?: boolean }) => {
+  return (
+    <div
+      className={`w-12 h-12 rounded-lg flex items-center justify-center border border-gray-200 ${
+        isActive
+          ? "bg-gradient-to-br from-blue-100 to-blue-200"
+          : "bg-gradient-to-br from-gray-100 to-gray-200"
+      }`}
+    >
+      <Puzzle
+        className={`w-6 h-6 ${isActive ? "text-blue-600" : "text-gray-400"}`}
+      />
+    </div>
+  );
+};
 
 // Validation schemas
 const addOnCreateSchema = z.object({
@@ -255,10 +272,8 @@ export default function AddonsContainer() {
         key: "icon",
         title: "",
         width: 60,
-        render: () => (
-          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center border border-gray-200">
-            <Puzzle className="w-6 h-6 text-blue-600" />
-          </div>
+        render: (_value: any, record: AddOnTableData) => (
+          <AddonIcon isActive={record.isActive} />
         ),
       },
       {

@@ -110,15 +110,62 @@ const StaffContainer = () => {
 
   // Handle form submission for create
   const handleCreate = async (data: StaffFormData) => {
+    console.log("DEBUG: Staff form submit triggered with data:", data);
+    console.log("DEBUG: Uploaded avatar:", uploadedAvatar);
+
     try {
+      // Validate required fields
+      if (!data.name) {
+        addToast({
+          message: "Personel adı gereklidir",
+          type: "error",
+        });
+        return;
+      }
+
+      if (!data.email) {
+        addToast({
+          message: "E-posta adresi gereklidir",
+          type: "error",
+        });
+        return;
+      }
+
+      // URL'lere BASE_URL ön eki ekle
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
+
+      let avatarUrl: string | undefined;
+      if (uploadedAvatar) {
+        avatarUrl = uploadedAvatar.url.startsWith("http")
+          ? uploadedAvatar.url
+          : `${baseUrl}${uploadedAvatar.url}`;
+      }
+
+      // URL formatını kontrol et
+      if (avatarUrl) {
+        try {
+          new URL(avatarUrl);
+        } catch (urlError) {
+          console.error("Invalid avatar URL format:", urlError);
+          addToast({
+            message: "Avatar URL'i geçerli değil. Lütfen tekrar yükleyin.",
+            type: "error",
+          });
+          return;
+        }
+      }
+
       const formattedData = {
         ...data,
-        avatar: uploadedAvatar?.url || undefined,
+        avatar: avatarUrl,
         specialties: selectedSpecialties,
       };
 
+      console.log("DEBUG: Staff payload to submit:", formattedData);
+
       await createMutation.mutateAsync(formattedData);
 
+      console.log("DEBUG: Staff created successfully");
       addToast({
         message: "Personel başarıyla oluşturuldu",
         type: "success",
@@ -127,9 +174,8 @@ const StaffContainer = () => {
       setUploadedAvatar(null);
       setSelectedSpecialties([]);
       refetch();
-      refetch();
-      setUploadedAvatar(null);
     } catch (error: any) {
+      console.error("DEBUG: Staff creation failed:", error);
       addToast({
         message: error.message || "Personel oluşturulurken bir hata oluştu",
         type: "error",
@@ -139,15 +185,57 @@ const StaffContainer = () => {
 
   // Handle form submission for update
   const handleUpdate = async (data: StaffUpdateData) => {
+    console.log("DEBUG: Staff update triggered with data:", data);
+    console.log("DEBUG: Uploaded avatar:", uploadedAvatar);
+
     try {
+      if (!selectedStaff?.id) {
+        addToast({
+          message: "Güncellenecek personel bulunamadı",
+          type: "error",
+        });
+        return;
+      }
+
+      // URL'lere BASE_URL ön eki ekle
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
+
+      let avatarUrl: string | undefined;
+      if (uploadedAvatar) {
+        avatarUrl = uploadedAvatar.url.startsWith("http")
+          ? uploadedAvatar.url
+          : `${baseUrl}${uploadedAvatar.url}`;
+      } else {
+        // Eğer yeni avatar yüklenmediyse mevcut avatar'ı kullan
+        avatarUrl = selectedStaff?.avatar;
+      }
+
+      // URL formatını kontrol et
+      if (avatarUrl) {
+        try {
+          new URL(avatarUrl);
+        } catch (urlError) {
+          console.error("Invalid avatar URL format:", urlError);
+          addToast({
+            message: "Avatar URL'i geçerli değil. Lütfen tekrar yükleyin.",
+            type: "error",
+          });
+          return;
+        }
+      }
+
       const formattedData = {
         ...data,
-        avatar: uploadedAvatar?.url || selectedStaff?.avatar || undefined,
+        id: selectedStaff.id,
+        avatar: avatarUrl,
         specialties: data.specialties || [],
       };
 
+      console.log("DEBUG: Staff update payload:", formattedData);
+
       await updateMutation.mutateAsync(formattedData);
 
+      console.log("DEBUG: Staff updated successfully");
       addToast({
         message: "Personel başarıyla güncellendi",
         type: "success",
@@ -156,6 +244,7 @@ const StaffContainer = () => {
       refetch();
       setUploadedAvatar(null);
     } catch (error: any) {
+      console.error("DEBUG: Staff update failed:", error);
       addToast({
         message: error.message || "Personel güncellenirken bir hata oluştu",
         type: "error",

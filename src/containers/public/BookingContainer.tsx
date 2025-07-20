@@ -81,7 +81,7 @@ export default function BookingContainer() {
     includeInactive: false,
   });
 
-  const { data: addOnsResponse } = trpc.addOn.list.useQuery({
+  const { data: addOnsResponse, isLoading: addOnsLoading } = trpc.addOn.list.useQuery({
     limit: 50,
     includeInactive: false,
   });
@@ -91,11 +91,37 @@ export default function BookingContainer() {
   const addOns = addOnsResponse?.items || [];
   const locations = locationsData?.items || [];
 
-  // Debug logging for development
+  // Debug logging for development - AddOns için detaylı log
   console.log('Packages Response:', packagesResponse);
   console.log('Packages Data:', packages);
   console.log('Packages Error:', packagesError);
   console.log('Packages Loading:', packagesLoading);
+
+  // AddOns için detaylı debug logging
+  console.log('AddOns Response:', addOnsResponse);
+  console.log('AddOns Data:', addOns);
+  console.log('AddOns Count:', addOns?.length || 0);
+  console.log('AddOns Loading:', trpc.addOn.list.useQuery({
+    limit: 50,
+    includeInactive: false,
+  }).isLoading);
+
+  // Her addOn'u ayrıntılı logla
+  if (addOns && addOns.length > 0) {
+    console.log('AddOns Individual Items:');
+    addOns.forEach((addOn: any, index: number) => {
+      console.log(`AddOn ${index}:`, {
+        id: addOn.id,
+        name: addOn.name,
+        price: addOn.price,
+        description: addOn.description,
+        isActive: addOn.isActive,
+        durationInMinutes: addOn.durationInMinutes
+      });
+    });
+  } else {
+    console.warn('AddOns array is empty or undefined');
+  }
 
   // Get site settings for callback URL
   const { data: siteSettings } = trpc.systemSettings.getSiteSettings.useQuery();
@@ -694,6 +720,7 @@ export default function BookingContainer() {
                     onUpdate={(selectedAddOns: string[]) =>
                       updateFormData({ selectedAddOns })
                     }
+                    isLoading={addOnsLoading}
                   />
                 )}
 

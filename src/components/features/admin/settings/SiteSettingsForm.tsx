@@ -176,19 +176,40 @@ export default function SiteSettingsForm() {
               {logoUrl && (
                 <div className="mb-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
                   <p className="text-xs text-gray-600 mb-2">Mevcut Logo:</p>
-                  <div className="relative w-32 h-16 bg-white rounded border">
-                    <Image
+                  <div className="relative w-32 h-16 bg-white rounded border overflow-hidden">
+                    {/* S3 URL'leri için her zaman img tag kullan */}
+                    <img
                       src={logoUrl}
                       alt="Site Logo"
-                      fill
-                      className="object-contain p-2"
+                      className="w-full h-full object-contain p-2"
+                      onLoad={() => console.log(`Logo loaded: ${logoUrl}`)}
                       onError={(e) => {
-                        // Resim yüklenemezse varsayılan icon göster
+                        console.error(`Logo failed to load: ${logoUrl}`);
                         e.currentTarget.style.display = "none";
+                        // Fallback olarak placeholder göster - HTMLElement tipini açıkça belirt
+                        const placeholder = e.currentTarget.parentElement?.querySelector('.logo-placeholder') as HTMLElement;
+                        if (placeholder) placeholder.style.display = 'flex';
                       }}
                     />
+                    {/* Fallback placeholder */}
+                    <div
+                      className="logo-placeholder absolute inset-0 flex items-center justify-center bg-gray-100 text-gray-400"
+                      style={{ display: 'none' }}
+                    >
+                      <ImageIcon className="w-8 h-8" />
+                    </div>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">{logoUrl}</p>
+                  <p className="text-xs text-gray-500 mt-1 break-all">{logoUrl}</p>
+                  {/* URL Test Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.open(logoUrl, '_blank');
+                    }}
+                    className="mt-2 text-xs text-blue-600 hover:text-blue-800"
+                  >
+                    URL'yi Test Et
+                  </button>
                 </div>
               )}
 
@@ -203,6 +224,7 @@ export default function SiteSettingsForm() {
                     "image/svg+xml",
                     "image/webp",
                   ],
+                  uploadPath: "settings/logos", // S3'te özel klasör
                 }}
                 onUpload={(files) => {
                   if (files.length > 0) {
@@ -226,19 +248,40 @@ export default function SiteSettingsForm() {
               {faviconUrl && (
                 <div className="mb-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
                   <p className="text-xs text-gray-600 mb-2">Mevcut Favicon:</p>
-                  <div className="relative w-8 h-8 bg-white rounded border">
-                    <Image
+                  <div className="relative w-8 h-8 bg-white rounded border overflow-hidden">
+                    {/* S3 URL'leri için her zaman img tag kullan */}
+                    <img
                       src={faviconUrl}
                       alt="Site Favicon"
-                      fill
-                      className="object-contain p-1"
+                      className="w-full h-full object-contain p-1"
+                      onLoad={() => console.log(`Favicon loaded: ${faviconUrl}`)}
                       onError={(e) => {
-                        // Resim yüklenemezse varsayılan icon göster
+                        console.error(`Favicon failed to load: ${faviconUrl}`);
                         e.currentTarget.style.display = "none";
+                        // Fallback olarak placeholder göster - HTMLElement tipini açıkça belirt
+                        const placeholder = e.currentTarget.parentElement?.querySelector('.favicon-placeholder') as HTMLElement;
+                        if (placeholder) placeholder.style.display = 'flex';
                       }}
                     />
+                    {/* Fallback placeholder */}
+                    <div
+                      className="favicon-placeholder absolute inset-0 flex items-center justify-center bg-gray-100 text-gray-400"
+                      style={{ display: 'none' }}
+                    >
+                      <ImageIcon className="w-4 h-4" />
+                    </div>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">{faviconUrl}</p>
+                  <p className="text-xs text-gray-500 mt-1 break-all">{faviconUrl}</p>
+                  {/* URL Test Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.open(faviconUrl, '_blank');
+                    }}
+                    className="mt-2 text-xs text-blue-600 hover:text-blue-800"
+                  >
+                    URL'yi Test Et
+                  </button>
                 </div>
               )}
 
@@ -253,6 +296,7 @@ export default function SiteSettingsForm() {
                     "image/jpeg",
                     "image/svg+xml",
                   ],
+                  uploadPath: "settings/favicons", // S3'te özel klasör
                 }}
                 onUpload={(files) => {
                   if (files.length > 0) {

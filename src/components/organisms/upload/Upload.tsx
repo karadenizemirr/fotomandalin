@@ -54,7 +54,7 @@ export default function Upload({
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Update files when initialFiles change - memoize initialFiles to prevent infinite loops
+  // Update files when initialFiles change
   const memoizedInitialFiles = React.useMemo(
     () => initialFiles,
     [initialFiles.length, initialFiles.map((f) => f.id).join(",")]
@@ -66,24 +66,87 @@ export default function Upload({
 
   // Get upload config based on preset or custom config
   const uploadConfig = React.useMemo(() => {
+    const presets = {
+      image: {
+        maxSize: 5 * 1024 * 1024, // 5MB
+        allowedTypes: ["image/jpeg", "image/png", "image/webp", "image/gif"],
+        uploadPath: "images",
+      },
+      avatar: {
+        maxSize: 2 * 1024 * 1024, // 2MB
+        allowedTypes: ["image/jpeg", "image/png", "image/webp"],
+        uploadPath: "avatars",
+      },
+      document: {
+        maxSize: 10 * 1024 * 1024, // 10MB
+        allowedTypes: ["application/pdf", "text/plain", "application/msword"],
+        uploadPath: "documents",
+      },
+      video: {
+        maxSize: 50 * 1024 * 1024, // 50MB
+        allowedTypes: ["video/mp4", "video/quicktime", "video/webm"],
+        uploadPath: "videos",
+      },
+    };
+
     if (preset) {
-      const presets = uploadService.getPresets();
       return { ...presets[preset], ...config };
     }
     return config || {};
   }, [preset, config]);
+
+  // Notify parent component when files change
+  useEffect(() => {
+    const successfulFiles = files.filter((f) => f.status === "success");
+    onUpload?.(successfulFiles);
+  }, [files, onUpload]);
+
+  // S3 upload function
+  const uploadToS3 = async (file: File): Promise<UploadedFile> => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    if (config) {
+      formData.append("config", JSON.stringify(config));
+    }
+
+    const response = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Upload failed");
+    }
+
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.error || "Upload failed");
+    }
+
+    return {
+      id: result.file.id,
+      name: result.file.name,
+      size: result.file.size,
+      type: result.file.type,
+      url: result.file.url,
+      thumbnailUrl: result.file.thumbnailUrl,
+      uploadedAt: new Date(result.file.uploadedAt),
+      status: "success",
+    };
+  };
 
   const handleFileSelect = useCallback(
     async (selectedFiles: FileList) => {
       if (disabled || isUploading) return;
 
       const fileArray = Array.from(selectedFiles);
-
       setIsUploading(true);
 
-      // Use functional update to access current files state
       setFiles((currentFiles) => {
-        // Check max files limit with current state
+        // Check max files limit
         if (currentFiles.length + fileArray.length > maxFiles) {
           console.warn(`En fazla ${maxFiles} dosya yükleyebilirsiniz`);
           setIsUploading(false);
@@ -102,44 +165,42 @@ export default function Upload({
           progress: 0,
         }));
 
-        // Return new state with uploaded files
-        return [...currentFiles, ...initialFiles];
-      });
+        const newFiles = [...currentFiles, ...initialFiles];
 
-      try {
-        // Upload files
-        const uploadedFiles = await uploadService.uploadFiles(
-          fileArray,
-          uploadConfig
-        );
+        // Start upload process for each file
+        fileArray.forEach(async (file, index) => {
+          try {
+            const uploadedFile = await uploadToS3(file);
 
-        // Update state with results using functional update
-        setFiles((currentFiles) => {
-          const newFiles = [...currentFiles];
-          const uploadingStartIndex = currentFiles.length - fileArray.length;
-
-          uploadedFiles.forEach((uploadedFile, index) => {
-            const targetIndex = uploadingStartIndex + index;
-            if (targetIndex >= 0 && targetIndex < newFiles.length) {
-              newFiles[targetIndex] = uploadedFile;
-            }
-          });
-
-          return newFiles;
+            setFiles((prevFiles) =>
+              prevFiles.map((f) =>
+                f.id === initialFiles[index].id ? uploadedFile : f
+              )
+            );
+          } catch (error) {
+            console.error("Upload error:", error);
+            setFiles((prevFiles) =>
+              prevFiles.map((f) =>
+                f.id === initialFiles[index].id
+                  ? {
+                      ...f,
+                      status: "error",
+                      error:
+                        error instanceof Error
+                          ? error.message
+                          : "Upload failed",
+                    }
+                  : f
+              )
+            );
+          }
         });
 
-        onUpload?.(uploadedFiles.filter((f) => f.status === "success"));
-      } catch (error) {
-        console.error("Upload error:", error);
-        // Reset uploading files on error
-        setFiles((currentFiles) =>
-          currentFiles.filter((file) => file.status !== "uploading")
-        );
-      } finally {
         setIsUploading(false);
-      }
+        return newFiles;
+      });
     },
-    [maxFiles, disabled, isUploading, uploadConfig, onUpload]
+    [disabled, isUploading, maxFiles, config]
   );
 
   const handleDragOver = useCallback(

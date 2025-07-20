@@ -262,49 +262,97 @@ export default function PackageContainer() {
 
   // Form submit handler
   const handleFormSubmit = async (data: any) => {
-    // Auto-generate slug if not provided or empty
-    const finalSlug =
-      data.slug && data.slug.trim()
-        ? data.slug.trim()
-        : generateSlug(data.name || "");
+    console.log("DEBUG: Package form submit triggered with data:", data);
+    console.log("DEBUG: Uploaded image:", uploadedImage);
 
-    // Handle image: use uploaded image URL or existing image
-    const imageUrl = uploadedImage?.url || data.coverImage || undefined;
+    try {
+      // Auto-generate slug if not provided or empty
+      const finalSlug =
+        data.slug && data.slug.trim()
+          ? data.slug.trim()
+          : generateSlug(data.name || "");
 
-    // Clean up form data and convert types
-    const formData = {
-      ...data,
-      slug: finalSlug,
-      coverImage: imageUrl && imageUrl.trim() ? imageUrl.trim() : undefined,
-      basePrice: Number(data.basePrice) || 0,
-      discountPrice: data.discountPrice
-        ? Number(data.discountPrice)
-        : undefined,
-      durationInMinutes: Number(data.durationInMinutes) || 0,
-      photoCount: data.photoCount ? Number(data.photoCount) : undefined,
-      sortOrder: Number(data.sortOrder) || 0,
-      description:
-        data.description && data.description.trim()
-          ? data.description.trim()
-          : undefined,
-      shortDesc:
-        data.shortDesc && data.shortDesc.trim()
-          ? data.shortDesc.trim()
-          : undefined,
-      metaTitle:
-        data.metaTitle && data.metaTitle.trim()
-          ? data.metaTitle.trim()
-          : undefined,
-      metaDescription:
-        data.metaDescription && data.metaDescription.trim()
-          ? data.metaDescription.trim()
-          : undefined,
-    };
+      // URL'lere BASE_URL ön eki ekle
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
 
-    if (editingPackage) {
-      await handleUpdatePackage(formData);
-    } else {
-      await handleCreatePackage(formData);
+      let imageUrl: string | undefined;
+      if (uploadedImage) {
+        imageUrl = uploadedImage.url.startsWith("http")
+          ? uploadedImage.url
+          : `${baseUrl}${uploadedImage.url}`;
+      } else {
+        // Eğer düzenleme modundaysa mevcut resmi kullan
+        imageUrl = editingPackage?.coverImage || data.coverImage;
+      }
+
+      // URL formatını kontrol et
+      if (imageUrl) {
+        try {
+          new URL(imageUrl);
+        } catch (urlError) {
+          console.error("Invalid package image URL format:", urlError);
+          addToast({
+            title: "Hata",
+            message: "Paket görseli URL'i geçerli değil. Lütfen tekrar yükleyin.",
+            type: "error",
+          });
+          return;
+        }
+      }
+
+      // Clean up form data and convert types
+      const formData = {
+        ...data,
+        slug: finalSlug,
+        coverImage: imageUrl && imageUrl.trim() ? imageUrl.trim() : undefined,
+        basePrice: Number(data.basePrice) || 0,
+        discountPrice: data.discountPrice
+          ? Number(data.discountPrice)
+          : undefined,
+        durationInMinutes: Number(data.durationInMinutes) || 0,
+        photoCount: data.photoCount ? Number(data.photoCount) : undefined,
+        sortOrder: Number(data.sortOrder) || 0,
+        description:
+          data.description && data.description.trim()
+            ? data.description.trim()
+            : undefined,
+        shortDesc:
+          data.shortDesc && data.shortDesc.trim()
+            ? data.shortDesc.trim()
+            : undefined,
+        metaTitle:
+          data.metaTitle && data.metaTitle.trim()
+            ? data.metaTitle.trim()
+            : undefined,
+        metaDescription:
+          data.metaDescription && data.metaDescription.trim()
+            ? data.metaDescription.trim()
+            : undefined,
+      };
+
+      console.log("DEBUG: Package payload to submit:", formData);
+
+      if (editingPackage) {
+        // Update existing package
+        await updatePackageMutation.mutateAsync({
+          ...formData,
+          id: editingPackage.id,
+        });
+        console.log("DEBUG: Package updated successfully");
+      } else {
+        // Create new package
+        await createPackageMutation.mutateAsync(formData);
+        console.log("DEBUG: Package created successfully");
+      }
+
+      setUploadedImage(null);
+    } catch (error: any) {
+      console.error("DEBUG: Package form submit failed:", error);
+      addToast({
+        title: "Hata",
+        message: error.message || "İşlem sırasında bir hata oluştu",
+        type: "error",
+      });
     }
   };
 

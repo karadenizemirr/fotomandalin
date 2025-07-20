@@ -29,7 +29,7 @@ class UploadService {
   private defaultConfig: UploadConfig;
 
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_UPLOAD_URL || '/api/upload';
+    this.baseUrl = '/api/upload'; // Process env kaldırıldı, sabit endpoint
     this.defaultConfig = {
       maxSize: 10 * 1024 * 1024, // 10MB
       allowedTypes: ['image/*', 'video/*', 'application/pdf'],
@@ -39,7 +39,7 @@ class UploadService {
   }
 
   /**
-   * Upload a single file
+   * Upload a single file - S3UploadService ile entegre
    */
   async uploadFile(file: File, config?: Partial<UploadConfig>): Promise<UploadedFile> {
     const finalConfig = { ...this.defaultConfig, ...config };
@@ -68,7 +68,11 @@ class UploadService {
         throw new Error(data.error || 'Upload failed');
       }
 
-      return data.file;
+      // uploadedAt string'den Date'e çevir
+      return {
+        ...data.file,
+        uploadedAt: new Date(data.file.uploadedAt)
+      };
     } catch (error) {
       console.error('Upload error:', error);
       throw error;
@@ -105,17 +109,23 @@ class UploadService {
   }
 
   /**
-   * Delete a file
+   * Delete a file - S3UploadService ile entegre DELETE endpoint kullan
    */
   async deleteFile(fileUrl: string): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/delete`, {
+      const response = await fetch(this.baseUrl, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ url: fileUrl }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Delete failed' }));
+        console.error('Delete API Error:', errorData);
+        return false;
+      }
 
       const data = await response.json();
       return data.success === true;
@@ -126,12 +136,13 @@ class UploadService {
   }
 
   /**
-   * Get file info
+   * Get file info - S3 signed URL ile
    */
   async getFileInfo(fileUrl: string): Promise<any> {
     try {
-      const response = await fetch(`${this.baseUrl}/info?url=${encodeURIComponent(fileUrl)}`);
-      return await response.json();
+      // Bu endpoint henüz implement edilmedi, gelecekte S3UploadService.getSignedUrl kullanılabilir
+      console.log('Get file info not implemented yet for:', fileUrl);
+      return null;
     } catch (error) {
       console.error('Get file info error:', error);
       return null;
@@ -139,23 +150,13 @@ class UploadService {
   }
 
   /**
-   * Generate thumbnail for an image
+   * Generate thumbnail for an image - S3UploadService otomatik thumbnail üretiyor
    */
   async generateThumbnail(fileUrl: string, options?: { width?: number; height?: number }): Promise<string | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/thumbnail`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          url: fileUrl,
-          ...options,
-        }),
-      });
-
-      const data = await response.json();
-      return data.thumbnailUrl || null;
+      // S3UploadService zaten otomatik thumbnail üretiyor, bu metod deprecated
+      console.log('Thumbnail generation handled by S3UploadService automatically');
+      return null;
     } catch (error) {
       console.error('Thumbnail generation error:', error);
       return null;

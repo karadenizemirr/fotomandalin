@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { existsSync } from 'fs';
-import path from 'path';
+import { S3UploadService } from '@/lib/s3-upload';
 import sharp from 'sharp';
 
 export async function POST(request: NextRequest) {
   try {
-    const { url, width = 300, height = 300 } = await request.json();
+    const { url, width = 300, height = 300, quality = 80 } = await request.json();
 
     if (!url) {
       return NextResponse.json(
@@ -14,44 +13,107 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Convert URL to file path
-    const filePath = path.join(process.cwd(), 'public', url);
-    
-    if (!existsSync(filePath)) {
+    // Extract S3 key from URL
+    let s3Key: string;
+    if (url.includes('amazonaws.com')) {
+      // S3 URL format: https://bucket.s3.region.amazonaws.com/key
+      const urlParts = new URL(url);
+      s3Key = urlParts.pathname.substring(1); // Remove leading slash
+    } else if (url.startsWith('/uploads/')) {
+      // Local URL format: /uploads/filename.jpg
+      s3Key = url.substring(1); // Remove leading slash
+    } else {
       return NextResponse.json(
-        { success: false, error: 'Dosya bulunamadı' },
+        { success: false, error: 'Geçersiz URL formatı' },
+        { status: 400 }
+      );
+    }
+
+    console.log(`Generating thumbnail for S3 key: ${s3Key}`);
+
+    // Generate thumbnail key
+    const pathParts = s3Key.split('/');
+    const fileName = pathParts.pop()!;
+    const fileNameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.'));
+    const fileExt = fileName.substring(fileName.lastIndexOf('.'));
+    const thumbnailFileName = `${fileNameWithoutExt}_thumb_${width}x${height}${fileExt}`;
+    const thumbnailKey = [...pathParts, 'thumbnails', thumbnailFileName].join('/');
+
+    // Check if thumbnail already exists on S3
+    try {
+      const existingThumbnailUrl = `${process.env.AWS_S3_BUCKET_URL}/${thumbnailKey}`;
+
+      // Try to fetch existing thumbnail (simple HEAD request check)
+      const headResponse = await fetch(existingThumbnailUrl, { method: 'HEAD' });
+      if (headResponse.ok) {
+        return NextResponse.json({
+          success: true,
+          thumbnailUrl: existingThumbnailUrl,
+          fromCache: true,
+        });
+      }
+    } catch (error) {
+      // Thumbnail doesn't exist, continue to generate
+      console.log('Thumbnail not found in cache, generating new one...');
+    }
+
+    // Download original file from S3
+    const originalUrl = url.startsWith('http') ? url : `${process.env.AWS_S3_BUCKET_URL}/${s3Key}`;
+
+    let originalImageResponse: Response;
+    try {
+      originalImageResponse = await fetch(originalUrl);
+      if (!originalImageResponse.ok) {
+        throw new Error(`HTTP ${originalImageResponse.status}`);
+      }
+    } catch (error) {
+      return NextResponse.json(
+        { success: false, error: 'Orijinal dosya indirilemedi' },
         { status: 404 }
       );
     }
 
-    // Generate thumbnail filename
-    const originalDir = path.dirname(filePath);
-    const originalName = path.basename(filePath, path.extname(filePath));
-    const originalExt = path.extname(filePath);
-    const thumbnailName = `${originalName}_thumb_${width}x${height}${originalExt}`;
-    const thumbnailPath = path.join(originalDir, thumbnailName);
-    const thumbnailUrl = url.replace(path.basename(url), thumbnailName);
+    const originalImageBuffer = Buffer.from(await originalImageResponse.arrayBuffer());
 
-    // Check if thumbnail already exists
-    if (existsSync(thumbnailPath)) {
-      return NextResponse.json({
-        success: true,
-        thumbnailUrl,
-      });
+    // Generate thumbnail using Sharp
+    let thumbnailBuffer: Buffer;
+    try {
+      thumbnailBuffer = await sharp(originalImageBuffer)
+        .resize(width, height, {
+          fit: 'inside',
+          withoutEnlargement: true,
+        })
+        .jpeg({ quality, progressive: true })
+        .toBuffer();
+    } catch (error) {
+      return NextResponse.json(
+        { success: false, error: 'Thumbnail oluşturulamadı' },
+        { status: 500 }
+      );
     }
 
-    // Generate thumbnail
-    await sharp(filePath)
-      .resize(width, height, {
-        fit: 'inside',
-        withoutEnlargement: true,
-      })
-      .jpeg({ quality: 80 })
-      .toFile(thumbnailPath);
+    // Upload thumbnail to S3
+    const uploadResult = await S3UploadService.uploadFile(
+      thumbnailBuffer,
+      thumbnailFileName,
+      'image/jpeg',
+      pathParts.join('/') + '/thumbnails'
+    );
+
+    if (!uploadResult.success) {
+      return NextResponse.json(
+        { success: false, error: uploadResult.error || 'Thumbnail S3\'e yüklenemedi' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      thumbnailUrl,
+      thumbnailUrl: uploadResult.url,
+      thumbnailKey: uploadResult.key,
+      dimensions: { width, height },
+      size: thumbnailBuffer.length,
+      fromCache: false,
     });
 
   } catch (error) {
@@ -59,7 +121,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Thumbnail generation failed' 
+        error: error instanceof Error ? error.message : 'Thumbnail oluşturulurken hata oluştu'
       },
       { status: 500 }
     );

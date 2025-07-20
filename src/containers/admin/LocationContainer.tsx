@@ -132,25 +132,83 @@ const LocationContainer = () => {
 
   // Handle form submission for create
   const handleCreate = async (data: LocationFormData) => {
+    console.log("DEBUG: Location form submit triggered with data:", data);
+    console.log("DEBUG: Uploaded cover:", uploadedCoverImage);
+    console.log("DEBUG: Uploaded images:", uploadedImages);
+
     try {
+      // Validate required fields
+      if (!data.name) {
+        console.log("DEBUG: No location name provided");
+        addToast({
+          message: "Lokasyon adı gereklidir",
+          type: "error",
+        });
+        return;
+      }
+
+      // URL'lere BASE_URL ön eki ekle
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
+
+      let coverImageUrl: string | undefined;
+      if (uploadedCoverImage) {
+        coverImageUrl = uploadedCoverImage.url.startsWith("http")
+          ? uploadedCoverImage.url
+          : `${baseUrl}${uploadedCoverImage.url}`;
+      }
+
+      const imageUrls = uploadedImages.map((img) =>
+        img.url.startsWith("http") ? img.url : `${baseUrl}${img.url}`
+      );
+
+      // URL formatını kontrol et
+      if (coverImageUrl) {
+        try {
+          new URL(coverImageUrl);
+        } catch (urlError) {
+          console.error("Invalid cover image URL format:", urlError);
+          addToast({
+            message: "Kapak görseli URL'i geçerli değil. Lütfen tekrar yükleyin.",
+            type: "error",
+          });
+          return;
+        }
+      }
+
+      if (imageUrls.length > 0) {
+        try {
+          imageUrls.forEach((url) => new URL(url));
+        } catch (urlError) {
+          console.error("Invalid image URL format:", urlError);
+          addToast({
+            message: "Görsel URL'leri geçerli değil. Lütfen tekrar yükleyin.",
+            type: "error",
+          });
+          return;
+        }
+      }
+
       const formattedData = {
         ...data,
         slug: data.slug || generateSlug(data.name || ""),
-        images: uploadedImages.map((img) => img.url),
-        coverImage: uploadedCoverImage?.url || undefined,
+        images: imageUrls,
+        coverImage: coverImageUrl,
       };
+
+      console.log("DEBUG: Location payload to submit:", formattedData);
 
       await createMutation.mutateAsync(formattedData);
 
+      console.log("DEBUG: Location created successfully");
       addToast({
         message: "Lokasyon başarıyla oluşturuldu",
         type: "success",
       });
       setIsCreateModalOpen(false);
       refetch();
-      setUploadedImages([]);
-      setUploadedCoverImage(null);
+      resetForm();
     } catch (error: any) {
+      console.error("DEBUG: Location creation failed:", error);
       addToast({
         message: error.message || "Lokasyon oluşturulurken bir hata oluştu",
         type: "error",
@@ -160,29 +218,82 @@ const LocationContainer = () => {
 
   // Handle form submission for update
   const handleUpdate = async (data: LocationUpdateData) => {
+    console.log("DEBUG: Location update triggered with data:", data);
+    console.log("DEBUG: Uploaded cover:", uploadedCoverImage);
+    console.log("DEBUG: Uploaded images:", uploadedImages);
+
     try {
+      if (!selectedLocation?.id) {
+        addToast({
+          message: "Güncellenecek lokasyon bulunamadı",
+          type: "error",
+        });
+        return;
+      }
+
+      // URL'lere BASE_URL ön eki ekle
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
+
+      let coverImageUrl: string | undefined;
+      if (uploadedCoverImage) {
+        coverImageUrl = uploadedCoverImage.url.startsWith("http")
+          ? uploadedCoverImage.url
+          : `${baseUrl}${uploadedCoverImage.url}`;
+      }
+
+      const imageUrls = uploadedImages.map((img) =>
+        img.url.startsWith("http") ? img.url : `${baseUrl}${img.url}`
+      );
+
+      // URL formatını kontrol et
+      if (coverImageUrl) {
+        try {
+          new URL(coverImageUrl);
+        } catch (urlError) {
+          console.error("Invalid cover image URL format:", urlError);
+          addToast({
+            message: "Kapak görseli URL'i geçerli değil. Lütfen tekrar yükleyin.",
+            type: "error",
+          });
+          return;
+        }
+      }
+
+      if (imageUrls.length > 0) {
+        try {
+          imageUrls.forEach((url) => new URL(url));
+        } catch (urlError) {
+          console.error("Invalid image URL format:", urlError);
+          addToast({
+            message: "Görsel URL'leri geçerli değil. Lütfen tekrar yükleyin.",
+            type: "error",
+          });
+          return;
+        }
+      }
+
       const formattedData = {
         ...data,
-        slug:
-          selectedLocation?.slug !== data.slug
-            ? data.slug || generateSlug(data.name || "")
-            : selectedLocation.slug,
-        images: uploadedImages.map((img) => img.url),
-        coverImage:
-          uploadedCoverImage?.url || selectedLocation?.coverImage || undefined,
+        id: selectedLocation.id,
+        slug: data.slug || generateSlug(data.name || ""),
+        images: imageUrls,
+        coverImage: coverImageUrl,
       };
+
+      console.log("DEBUG: Location update payload:", formattedData);
 
       await updateMutation.mutateAsync(formattedData);
 
+      console.log("DEBUG: Location updated successfully");
       addToast({
         message: "Lokasyon başarıyla güncellendi",
         type: "success",
       });
       setIsEditModalOpen(false);
       refetch();
-      setUploadedImages([]);
-      setUploadedCoverImage(null);
+      resetForm();
     } catch (error: any) {
+      console.error("DEBUG: Location update failed:", error);
       addToast({
         message: error.message || "Lokasyon güncellenirken bir hata oluştu",
         type: "error",

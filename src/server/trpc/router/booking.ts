@@ -95,7 +95,19 @@ export const bookingRouter = router({
         const availableStaff = await ctx.prisma.staff.findMany({
           where: {
             isActive: true,
-            locationId: bookingData.locationId || undefined,
+            OR: [
+              // Staff whose primary location matches
+              { primaryLocationId: bookingData.locationId },
+              // Staff who can work at this location (many-to-many relationship)
+              {
+                workingLocations: {
+                  some: {
+                    locationId: bookingData.locationId,
+                    isActive: true,
+                  },
+                },
+              },
+            ],
             NOT: {
               bookings: {
                 some: {

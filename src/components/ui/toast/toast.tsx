@@ -81,7 +81,12 @@ export const ToastProvider = ({
       {isMounted &&
         createPortal(
           <div 
-            className={`fixed z-50 m-4 flex flex-col gap-2 ${positionClasses[position]}`}
+            className={`fixed z-50 flex flex-col gap-2 ${positionClasses[position]} pointer-events-none`}
+            style={{
+              margin: '1rem',
+              maxWidth: position.includes('center') ? '400px' : '420px',
+              width: position.includes('center') ? 'auto' : 'calc(100vw - 2rem)',
+            }}
             aria-live="polite"
             aria-atomic="true"
           >
@@ -139,23 +144,27 @@ const ToastItem = ({ toast, onClose }: { toast: Toast; onClose: () => void }) =>
 
   return (
     <div
-      className={`w-full max-w-sm overflow-hidden rounded-lg border ${bgColors[toast.type]} shadow-lg transition-all duration-300 transform ${
-        isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"
+      className={`w-full min-w-0 max-w-full overflow-hidden rounded-lg border ${bgColors[toast.type]} shadow-lg transition-all duration-300 transform pointer-events-auto ${
+        isVisible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 -translate-y-4 scale-95"
       }`}
       role="alert"
+      style={{
+        minWidth: '320px',
+        maxWidth: '420px',
+      }}
     >
       <div className="flex p-4">
         <div className="flex-shrink-0">{icons[toast.type]}</div>
-        <div className="ml-3 w-0 flex-1">
+        <div className="ml-3 flex-1 min-w-0">
           {toast.title && (
-            <p className={`text-sm font-medium ${titleColors[toast.type]}`}>{toast.title}</p>
+            <p className={`text-sm font-medium ${titleColors[toast.type]} truncate`}>{toast.title}</p>
           )}
-          <p className={`mt-1 text-sm ${messageColors[toast.type]}`}>{toast.message}</p>
+          <p className={`${toast.title ? 'mt-1' : ''} text-sm ${messageColors[toast.type]} break-words`}>{toast.message}</p>
         </div>
         <div className="ml-4 flex flex-shrink-0">
           <button
             type="button"
-            className="inline-flex rounded-md text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+            className="inline-flex rounded-md text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-colors duration-200"
             onClick={onClose}
           >
             <span className="sr-only">Kapat</span>
@@ -163,7 +172,12 @@ const ToastItem = ({ toast, onClose }: { toast: Toast; onClose: () => void }) =>
           </button>
         </div>
       </div>
-      <div className="h-1 bg-gradient-to-r from-transparent via-current to-transparent opacity-20" />
+      <div className={`h-1 bg-gradient-to-r ${
+        toast.type === 'success' ? 'from-green-200 via-green-400 to-green-200' :
+        toast.type === 'error' ? 'from-red-200 via-red-400 to-red-200' :
+        toast.type === 'warning' ? 'from-amber-200 via-amber-400 to-amber-200' :
+        'from-blue-200 via-blue-400 to-blue-200'
+      } opacity-60`} />
     </div>
   );
 };

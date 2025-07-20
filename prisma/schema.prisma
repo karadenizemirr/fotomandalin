@@ -236,8 +236,11 @@ model Location {
   updatedAt DateTime @updatedAt
 
   // Relations
-  bookings Booking[]
-  staff    Staff[]
+  bookings       Booking[]
+  // Personelin ana lokasyonu (opsiyonel)
+  primaryStaff   Staff[]
+  // Personelin çalışabildiği tüm lokasyonlar (many-to-many)
+  staffLocations StaffLocation[]
 
   @@map("locations")
 }
@@ -268,8 +271,12 @@ model Staff {
   updatedAt DateTime @updatedAt
 
   // Relations
-  locationId String?
-  location   Location? @relation(fields: [locationId], references: [id])
+  // Ana/birincil lokasyon (opsiyonel - personel hiçbir lokasyona bağlı olmayabilir)
+  primaryLocationId String?
+  primaryLocation   Location? @relation(fields: [primaryLocationId], references: [id])
+
+  // Çalışabildiği tüm lokasyonlar (many-to-many ilişki)
+  workingLocations StaffLocation[]
 
   bookings          Booking[]
   staffAvailability StaffAvailability[]
@@ -277,18 +284,49 @@ model Staff {
   @@map("staff")
 }
 
+// Personel-Lokasyon many-to-many ara tablosu
+model StaffLocation {
+  id         String @id @default(cuid())
+  staffId    String
+  locationId String
+
+  // Ek bilgiler
+  isPrimary Boolean @default(false) // Bu lokasyon personelin ana lokasyonu mu?
+  isActive  Boolean @default(true) // Bu lokasyonda aktif olarak çalışıyor mu?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  staff    Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, locationId])
+  @@map("staff_locations")
+}
+
+// Personel Müsaitlik/Çalışma Saatleri Yönetimi
 model StaffAvailability {
-  id      String   @id @default(cuid())
+  id      String @id @default(cuid())
   staffId String
-  date    DateTime @db.Date
 
-  // Time slots
-  startTime DateTime
-  endTime   DateTime
+  // Çalışma günü (0=Pazar, 1=Pazartesi, ..., 6=Cumartesi)
+  dayOfWeek Int // 0-6 arası değer
 
-  // Status
-  isAvailable Boolean @default(true)
-  reason      String? // Tatil, hastalık, izin, vb.
+  // Çalışma saatleri
+  startTime String // "09:00" formatında
+  endTime   String // "18:00" formatında
+
+  // Mola saatleri (opsiyonel)
+  breakStartTime String? // "12:00" formatında
+  breakEndTime   String? // "13:00" formatında
+
+  // Durum
+  isActive Boolean @default(true)
+
+  // Özel tarih kısıtlamaları (opsiyonel - belirli bir tarih için geçerli)
+  specificDate DateTime? // Eğer dolu ise, bu kural sadece o tarih için geçerli
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -297,7 +335,9 @@ model StaffAvailability {
   // Relations
   staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
 
-  @@unique([staffId, date, startTime])
+  // Index'ler
+  @@index([staffId, dayOfWeek])
+  @@index([staffId, specificDate])
   @@map("staff_availability")
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -56,18 +56,20 @@ export default function Topbar({
     }
   );
 
-  const allAnnouncements = useApi
-    ? apiAnnouncements
-    : announcements || (announcement ? [announcement] : []);
+  const allAnnouncements = useMemo(() => {
+    return useApi
+      ? apiAnnouncements || []
+      : announcements || (announcement ? [announcement] : []);
+  }, [useApi, apiAnnouncements, announcements, announcement]);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [dismissedIds, setDismissedIds] = useState<string[]>([]);
 
   // Filter out dismissed announcements
-  const visibleAnnouncements = allAnnouncements.filter(
-    (ann) => !dismissedIds.includes(ann.id)
-  );
+  const visibleAnnouncements = useMemo(() => {
+    return allAnnouncements.filter((ann) => !dismissedIds.includes(ann.id));
+  }, [allAnnouncements, dismissedIds]);
 
   const currentAnnouncement = visibleAnnouncements[currentIndex];
 
@@ -95,6 +97,8 @@ export default function Topbar({
 
   // Load dismissed announcements from localStorage
   useEffect(() => {
+    if (allAnnouncements.length === 0) return;
+
     const dismissed = allAnnouncements
       .filter((ann) => {
         if (ann.dismissible) {
@@ -104,7 +108,14 @@ export default function Topbar({
       })
       .map((ann) => ann.id);
 
-    setDismissedIds(dismissed);
+    // Only update if the dismissed IDs actually changed
+    setDismissedIds((prev) => {
+      const hasChanged =
+        prev.length !== dismissed.length ||
+        !prev.every((id, index) => id === dismissed[index]);
+
+      return hasChanged ? dismissed : prev;
+    });
   }, [allAnnouncements]);
 
   // Reset index if current announcement is dismissed

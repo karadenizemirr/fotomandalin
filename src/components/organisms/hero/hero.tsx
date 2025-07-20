@@ -158,7 +158,7 @@ export default function HeroComponent() {
                 transition={{ type: "spring", stiffness: 400, damping: 17 }}
               >
                 <Link
-                  href="/booking"
+                  href="/rezervasyon"
                   className="group inline-flex h-14 items-center justify-center rounded-xl bg-gradient-to-r from-black to-gray-800 px-8 text-base font-semibold text-white transition-all duration-200 hover:shadow-xl hover:shadow-black/20 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
                 >
                   Hemen Rezervasyon Yap
@@ -172,7 +172,7 @@ export default function HeroComponent() {
                 transition={{ type: "spring", stiffness: 400, damping: 17 }}
               >
                 <Link
-                  href="/services"
+                  href="/hizmetlerimiz"
                   className="group inline-flex h-14 items-center justify-center rounded-xl border border-gray-300 bg-white px-8 text-base font-semibold text-black transition-all duration-200 hover:bg-gray-50 hover:border-gray-400 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
                 >
                   Paketleri İncele

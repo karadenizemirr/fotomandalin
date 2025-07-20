@@ -1,12 +1,14 @@
-import SiteMetadata from "@/components/organisms/SiteMetadata";
+import { Metadata } from "next";
 import BookingContainer from "@/containers/public/BookingContainer";
-import { seoConfigs } from "@/lib/seo";
+import { generateMetadata as genMeta, pageMetadata } from "@/lib/metadata";
+
+export const metadata: Metadata = genMeta({
+  title: pageMetadata.booking.title,
+  description: pageMetadata.booking.description,
+  keywords: pageMetadata.booking.keywords,
+  url: "/rezervasyon",
+});
 
 export default function UserBookingPage() {
-  return (
-    <>
-      <SiteMetadata {...seoConfigs.booking} />
-      <BookingContainer />
-    </>
-  );
+  return <BookingContainer />;
 }

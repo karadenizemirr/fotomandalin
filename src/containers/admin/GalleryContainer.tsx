@@ -30,17 +30,16 @@ import {
   Search,
   Filter,
   Download,
-  Grid,
-  List,
   Camera,
 } from "lucide-react";
 import { createSlug } from "@/lib/utils";
 
-// Validation schemas
+// Validation schemas - Upload state'ilerini de dahil ederek düzeltiyorum
 const portfolioCreateSchema = z.object({
   title: z.string().min(1, "Başlık gereklidir"),
   description: z.string().optional(),
-  coverImage: z.string().min(1, "Kapak görseli gereklidir"),
+  // coverImage'ı optional yapıp validation'ı handleCreate'de yapacağız
+  coverImage: z.string().optional(),
   images: z.array(z.string()).default([]),
   tags: z.array(z.string()).default([]),
   isPublished: z.boolean().default(false),
@@ -70,7 +69,6 @@ const GalleryContainer = () => {
   const [selectedPortfolio, setSelectedPortfolio] = useState<any>(null);
   const [publishFilter, setPublishFilter] = useState<string>("all");
   const [featuredFilter, setFeaturedFilter] = useState<string>("all");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [uploadedCover, setUploadedCover] = useState<UploadedFile | null>(null);
   const [uploadedImages, setUploadedImages] = useState<UploadedFile[]>([]);
   const [tagInput, setTagInput] = useState("");
@@ -145,19 +143,17 @@ const GalleryContainer = () => {
     setTags(tags.filter((tag) => tag !== tagToRemove));
   };
 
-  // Handle form submission for create
-  const handleCreate = async (
-    data: Partial<PortfolioFormData> & { title: string }
-  ) => {
-    console.error("DEBUG: Form submit triggered with data:", data);
-    console.error("DEBUG: Uploaded cover:", uploadedCover);
-    console.error("DEBUG: Uploaded images:", uploadedImages);
-    console.error("DEBUG: Tags:", tags);
+  // Handle form submission for create - Backend schema'ya uygun veri formatı
+  const handleCreate = async (data: PortfolioFormData) => {
+    console.log("DEBUG: Form submit triggered with data:", data);
+    console.log("DEBUG: Uploaded cover:", uploadedCover);
+    console.log("DEBUG: Uploaded images:", uploadedImages);
+    console.log("DEBUG: Tags:", tags);
 
     try {
       // Validate required fields
       if (!uploadedCover) {
-        console.error("DEBUG: No cover image selected");
+        console.log("DEBUG: No cover image selected");
         addToast({
           message: "Kapak görseli seçmelisiniz",
           type: "error",
@@ -165,34 +161,54 @@ const GalleryContainer = () => {
         return;
       }
 
-      const slug = createSlug(data.title);
-      console.error("DEBUG: Generated slug:", slug);
+      // URL'lere BASE_URL ön eki ekle
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
+      const coverImageUrl = uploadedCover.url.startsWith("http")
+        ? uploadedCover.url
+        : `${baseUrl}${uploadedCover.url}`;
 
-      const portfolioData: PortfolioFormData = {
+      const galleryImageUrls = uploadedImages.map((img) =>
+        img.url.startsWith("http") ? img.url : `${baseUrl}${img.url}`
+      );
+
+      // URL formatını kontrol et
+      try {
+        new URL(coverImageUrl);
+        galleryImageUrls.forEach((url) => new URL(url));
+      } catch (urlError) {
+        console.error("Invalid URL format:", urlError);
+        addToast({
+          message: "Görsel URL'leri geçerli değil. Lütfen tekrar yükleyin.",
+          type: "error",
+        });
+        return;
+      }
+
+      const slug = createSlug(data.title);
+      console.log("DEBUG: Generated slug:", slug);
+
+      // Backend schema'ya uygun veri formatı
+      const portfolioPayload = {
         title: data.title,
-        description: data.description || "",
-        coverImage: uploadedCover.url,
-        images: uploadedImages.map((img) => img.url),
+        slug,
+        description: data.description || undefined,
+        coverImage: coverImageUrl,
+        images: galleryImageUrls,
         tags,
         isPublished: data.isPublished || false,
         isFeatured: data.isFeatured || false,
-        eventDate: data.eventDate || "",
-        location: data.location || "",
-        metaTitle: data.metaTitle || "",
-        metaDescription: data.metaDescription || "",
+        location: data.location || undefined,
+        metaTitle: data.metaTitle || undefined,
+        metaDescription: data.metaDescription || undefined,
+        // eventDate'i string olarak gönder, backend'de transform edilecek
+        eventDate: data.eventDate || undefined,
       };
 
-      console.error("DEBUG: Portfolio data to submit:", portfolioData);
+      console.log("DEBUG: Portfolio payload to submit:", portfolioPayload);
 
-      await createMutation.mutateAsync({
-        ...portfolioData,
-        slug,
-        eventDate: portfolioData.eventDate
-          ? new Date(portfolioData.eventDate)
-          : undefined,
-      });
+      await createMutation.mutateAsync(portfolioPayload);
 
-      console.error("DEBUG: Portfolio created successfully");
+      console.log("DEBUG: Portfolio created successfully");
       addToast({
         message: "Portfolio çalışması başarıyla oluşturuldu",
         type: "success",
@@ -212,6 +228,23 @@ const GalleryContainer = () => {
   // Handle form submission for update
   const handleUpdate = async (data: PortfolioUpdateData) => {
     try {
+      // URL'lere BASE_URL ön eki ekle
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
+
+      let coverImageUrl = data.coverImage;
+      if (uploadedCover?.url) {
+        coverImageUrl = uploadedCover.url.startsWith("http")
+          ? uploadedCover.url
+          : `${baseUrl}${uploadedCover.url}`;
+      }
+
+      let imageUrls = data.images;
+      if (uploadedImages.length > 0) {
+        imageUrls = uploadedImages.map((img) =>
+          img.url.startsWith("http") ? img.url : `${baseUrl}${img.url}`
+        );
+      }
+
       await updateMutation.mutateAsync({
         ...data,
         coverImage: uploadedCover?.url || data.coverImage,
@@ -220,7 +253,7 @@ const GalleryContainer = () => {
             ? uploadedImages.map((img) => img.url)
             : data.images,
         tags: tags.length > 0 ? tags : data.tags,
-        eventDate: data.eventDate ? new Date(data.eventDate) : undefined,
+        eventDate: data.eventDate || undefined,
       });
 
       addToast({
@@ -366,11 +399,16 @@ const GalleryContainer = () => {
         <div className="flex items-center space-x-3">
           <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
             <Image
-              src={record.coverImage}
-              alt={record.title}
+              src={record.coverImage || "/placeholder-image.jpg"}
+              alt={record.title || "Portfolio görseli"}
               width={64}
               height={64}
               className="w-full h-full object-cover"
+              unoptimized
+              onError={(e) => {
+                console.error("Image failed to load:", record.coverImage);
+                e.currentTarget.src = "/placeholder-image.jpg";
+              }}
             />
           </div>
           <div className="flex-1 min-w-0">
@@ -639,168 +677,30 @@ const GalleryContainer = () => {
               />
             </div>
           </div>
-
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setViewMode("grid")}
-              className={`p-2 rounded-md ${
-                viewMode === "grid"
-                  ? "bg-orange-100 text-orange-600"
-                  : "text-gray-400 hover:text-gray-600"
-              }`}
-            >
-              <Grid className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setViewMode("list")}
-              className={`p-2 rounded-md ${
-                viewMode === "list"
-                  ? "bg-orange-100 text-orange-600"
-                  : "text-gray-400 hover:text-gray-600"
-              }`}
-            >
-              <List className="w-4 h-4" />
-            </button>
-          </div>
         </div>
       </div>
 
       {/* Content Area */}
       <div className="bg-white rounded-lg border border-gray-200">
-        {viewMode === "grid" ? (
-          /* Grid View */
-          <div className="p-6">
-            {isLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {Array.from({ length: 8 }).map((_, index) => (
-                  <div key={index} className="animate-pulse">
-                    <div className="bg-gray-200 rounded-lg h-48 mb-3"></div>
-                    <div className="bg-gray-200 h-4 rounded mb-2"></div>
-                    <div className="bg-gray-200 h-3 rounded w-3/4"></div>
-                  </div>
-                ))}
-              </div>
-            ) : filteredData.length === 0 ? (
-              <div className="text-center py-12">
-                <Camera className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">
-                  Henüz çalışma yok
-                </h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  İlk portfolio çalışmanızı oluşturun.
-                </p>
-                <div className="mt-6">
-                  <button
-                    onClick={() => setIsCreateModalOpen(true)}
-                    className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Yeni Çalışma
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredData.map((portfolio) => (
-                  <div
-                    key={portfolio.id}
-                    className="group relative bg-white rounded-lg overflow-hidden shadow-sm border border-gray-200 hover:shadow-md transition-shadow"
-                  >
-                    <div className="aspect-w-4 aspect-h-3 relative">
-                      <Image
-                        src={portfolio.coverImage}
-                        alt={portfolio.title}
-                        width={300}
-                        height={200}
-                        className="w-full h-48 object-cover"
-                      />
-                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all flex items-center justify-center">
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex space-x-2">
-                          <button
-                            onClick={() => {
-                              setSelectedPortfolio(portfolio);
-                              setIsDetailModalOpen(true);
-                            }}
-                            className="p-2 bg-white rounded-full text-gray-700 hover:text-orange-600"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSelectedPortfolio(portfolio);
-                              setTags(portfolio.tags || []);
-                              setIsEditModalOpen(true);
-                            }}
-                            className="p-2 bg-white rounded-full text-gray-700 hover:text-orange-600"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                      <div className="absolute top-2 left-2 flex space-x-2">
-                        <StatusBadge isPublished={portfolio.isPublished} />
-                        <FeaturedBadge isFeatured={portfolio.isFeatured} />
-                      </div>
-                      <div className="absolute top-2 right-2">
-                        <span className="bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
-                          {portfolio.images?.length || 0} foto
-                        </span>
-                      </div>
-                    </div>
-                    <div className="p-4">
-                      <h3 className="font-medium text-gray-900 truncate mb-1">
-                        {portfolio.title}
-                      </h3>
-                      <p className="text-sm text-gray-500 truncate mb-2">
-                        {portfolio.description}
-                      </p>
-                      <div className="flex items-center justify-between text-xs text-gray-400">
-                        <span>
-                          {new Date(portfolio.createdAt).toLocaleDateString(
-                            "tr-TR"
-                          )}
-                        </span>
-                        <div className="flex space-x-1">
-                          {portfolio.tags
-                            ?.slice(0, 2)
-                            .map((tag: string, index: number) => (
-                              <span
-                                key={index}
-                                className="bg-gray-100 px-1 rounded"
-                              >
-                                #{tag}
-                              </span>
-                            ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : (
-          /* List View */
-          <DataTable
-            data={filteredData}
-            columns={columns}
-            actions={actions}
-            loading={isLoading}
-            pagination={{
-              current: currentPage,
-              pageSize: pageSize,
-              total: filteredData.length,
-              onChange: (page, size) => {
-                setCurrentPage(page);
-                setPageSize(size || 12);
-              },
-            }}
-            emptyText="Henüz portfolio çalışması bulunmuyor"
-          />
-        )}
+        <DataTable
+          data={filteredData}
+          columns={columns}
+          actions={actions}
+          loading={isLoading}
+          pagination={{
+            current: currentPage,
+            pageSize: pageSize,
+            total: filteredData.length,
+            onChange: (page, size) => {
+              setCurrentPage(page);
+              setPageSize(size || 12);
+            },
+          }}
+          emptyText="Henüz portfolio çalışması bulunmuyor"
+        />
       </div>
 
-      {/* Create Modal */}
+      {/* Create Modal - Schema'yı düzeltiyorum */}
       <Dialog
         isOpen={isCreateModalOpen}
         onClose={() => {
@@ -812,11 +712,11 @@ const GalleryContainer = () => {
         size="xl"
       >
         <Form
-          schema={portfolioCreateSchema.partial({ coverImage: true })}
+          schema={portfolioCreateSchema}
           defaultValues={{
             title: "",
             description: "",
-            coverImage: "",
+            coverImage: "", // Bu alan artık optional
             images: [],
             tags: [],
             isPublished: false,
@@ -876,9 +776,13 @@ const GalleryContainer = () => {
                     onUpload={(files) => {
                       if (files.length > 0) {
                         setUploadedCover(files[0]);
+                        console.log("Cover image uploaded:", files[0]);
                       }
                     }}
-                    onRemove={() => setUploadedCover(null)}
+                    onRemove={() => {
+                      setUploadedCover(null);
+                      console.log("Cover image removed");
+                    }}
                     className="border-2 border-dashed border-gray-300 rounded-lg p-4"
                   />
                   {uploadedCover && (
@@ -886,6 +790,14 @@ const GalleryContainer = () => {
                       <p className="text-sm text-green-700 flex items-center">
                         <span className="mr-2">✓</span>
                         Kapak görseli seçildi: {uploadedCover.name}
+                      </p>
+                    </div>
+                  )}
+                  {!uploadedCover && (
+                    <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-md">
+                      <p className="text-sm text-amber-700 flex items-center">
+                        <span className="mr-2">⚠️</span>
+                        Kapak görseli zorunludur
                       </p>
                     </div>
                   )}
@@ -903,11 +815,13 @@ const GalleryContainer = () => {
                     initialFiles={uploadedImages}
                     onUpload={(files) => {
                       setUploadedImages(files);
+                      console.log("Gallery images uploaded:", files);
                     }}
                     onRemove={(file) => {
                       setUploadedImages(
                         uploadedImages.filter((img) => img.id !== file.id)
                       );
+                      console.log("Gallery image removed:", file);
                     }}
                     className="border-2 border-dashed border-gray-300 rounded-lg p-4"
                   />
@@ -1030,7 +944,7 @@ const GalleryContainer = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={createMutation.isPending}
+                  disabled={createMutation.isPending || !uploadedCover}
                   className="px-6 py-2 text-white bg-orange-500 rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
                 >
                   {createMutation.isPending ? "Ekleniyor..." : "Çalışma Ekle"}
@@ -1197,6 +1111,7 @@ const GalleryContainer = () => {
                 width={800}
                 height={400}
                 className="w-full h-64 object-cover"
+                unoptimized
               />
             </div>
 
@@ -1330,6 +1245,7 @@ const GalleryContainer = () => {
                             width={200}
                             height={200}
                             className="w-full h-32 object-cover"
+                            unoptimized
                           />
                         </div>
                       )

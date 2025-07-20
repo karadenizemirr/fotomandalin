@@ -61,7 +61,7 @@ export default function RegisterContainer() {
       });
 
       // Başarılı kayıt sonrası login sayfasına yönlendir
-      router.push("/auth/login");
+      router.push("/giris-yap");
     },
     onError: (error) => {
       addToast({

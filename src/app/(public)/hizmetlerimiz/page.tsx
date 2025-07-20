@@ -1,12 +1,14 @@
-import SiteMetadata from "@/components/organisms/SiteMetadata";
+import { Metadata } from "next";
 import ServicesContainer from "@/containers/public/ServicesContainer";
-import { seoConfigs } from "@/lib/seo";
+import { generateMetadata as genMeta, pageMetadata } from "@/lib/metadata";
+
+export const metadata: Metadata = genMeta({
+  title: pageMetadata.services.title,
+  description: pageMetadata.services.description,
+  keywords: pageMetadata.services.keywords,
+  url: "/hizmetlerimiz",
+});
 
 export default function ServicesPage() {
-  return (
-    <>
-      <SiteMetadata {...seoConfigs.services} />
-      <ServicesContainer />
-    </>
-  );
+  return <ServicesContainer />;
 }

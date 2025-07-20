@@ -41,7 +41,13 @@ const staffCreateSchema = z.object({
   experience: z.coerce.number().int().min(0).optional(),
   isActive: z.boolean().default(true),
   specialties: z.array(z.string()).default([]),
-  locationId: z.string().optional(),
+  primaryLocationId: z.string().nullable().optional().transform((val) => {
+    // Boş string veya undefined ise null döndür
+    if (!val || val === "" || val === "none" || val === "select") return null;
+    return val;
+  }),
+  // Birden fazla lokasyon için (gelecekte kullanılabilir)
+  workingLocationIds: z.array(z.string()).optional().default([]),
 });
 
 const staffUpdateSchema = staffCreateSchema.extend({
@@ -456,7 +462,7 @@ const StaffContainer = () => {
             experience: 0,
             isActive: true,
             specialties: [],
-            locationId: "",
+            primaryLocationId: "",
           }}
           onSubmit={handleCreate}
         >
@@ -497,7 +503,7 @@ const StaffContainer = () => {
               />
 
               <SelectField
-                name="locationId"
+                name="primaryLocationId"
                 label="Lokasyon"
                 placeholder="Lokasyon seçin"
                 options={[
@@ -629,7 +635,7 @@ const StaffContainer = () => {
               experience: selectedStaff.experience || 0,
               isActive: selectedStaff.isActive,
               specialties: selectedStaff.specialties || [],
-              locationId: selectedStaff.locationId || "",
+              primaryLocationId: selectedStaff.primaryLocationId || "",
             }}
             onSubmit={handleUpdate}
           >
@@ -670,7 +676,7 @@ const StaffContainer = () => {
                 />
 
                 <SelectField
-                  name="locationId"
+                  name="primaryLocationId"
                   label="Lokasyon"
                   placeholder="Lokasyon seçin"
                   options={[

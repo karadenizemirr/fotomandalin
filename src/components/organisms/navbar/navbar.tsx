@@ -178,14 +178,14 @@ export default function Navbar() {
                         </div>
                         <div className="py-1">
                           <Link
-                            href="/hesabim"
+                            href="/hesabim/profilim"
                             className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                           >
                             <Settings className="w-4 h-4 mr-3" />
                             Hesabım
                           </Link>
                           <Link
-                            href="/rezervasyonlarim"
+                            href="/hesabim/rezervasyonlarim"
                             className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                           >
                             <Settings className="w-4 h-4 mr-3" />

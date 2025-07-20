@@ -28,7 +28,46 @@ const updateLocationSchema = createLocationSchema.partial().extend({
 });
 
 export const locationRouter = router({
-  // Get all locations
+  // Public procedures
+  list: publicProcedure
+    .input(z.object({
+      includeInactive: z.boolean().default(false),
+      limit: z.number().int().min(1).max(100).default(50),
+      cursor: z.string().optional(),
+    }))
+    .query(async ({ ctx, input }) => {
+      const { includeInactive, limit, cursor } = input;
+
+      const where: any = {};
+      if (!includeInactive) where.isActive = true;
+
+      const items = await ctx.prisma.location.findMany({
+        where,
+        orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+        take: limit + 1,
+        cursor: cursor ? { id: cursor } : undefined,
+        include: {
+          _count: {
+            select: {
+              bookings: true
+            }
+          }
+        }
+      });
+
+      let nextCursor: typeof cursor | undefined = undefined;
+      if (items.length > limit) {
+        const nextItem = items.pop();
+        nextCursor = nextItem?.id;
+      }
+
+      return {
+        items,
+        nextCursor,
+      };
+    }),
+
+  // Get all locations (backward compatibility)
   getAll: publicProcedure
     .input(z.object({
       includeInactive: z.boolean().default(false),

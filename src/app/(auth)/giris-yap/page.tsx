@@ -1,5 +1,15 @@
+import { Metadata } from "next";
 import LoginContainer from "@/containers/auth/LoginContainer";
+import { generateMetadata as genMeta, pageMetadata } from "@/lib/metadata";
 import { Suspense } from "react";
+
+export const metadata: Metadata = genMeta({
+  title: pageMetadata.login.title,
+  description: pageMetadata.login.description,
+  keywords: pageMetadata.login.keywords,
+  url: "/giris-yap",
+  noIndex: pageMetadata.login.noIndex,
+});
 
 function LoginPageContent() {
   return (

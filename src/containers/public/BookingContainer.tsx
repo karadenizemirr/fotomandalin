@@ -69,20 +69,33 @@ export default function BookingContainer() {
   // Toast hook
   const { addToast } = useToast();
 
-  // tRPC hooks - Bu hook'lar her zaman çağrılmalı
-  const { data: packages, isLoading: packagesLoading } =
+  // tRPC hooks - Doğru endpoint adları kullanılıyor
+  const { data: packagesResponse, isLoading: packagesLoading, error: packagesError } =
     trpc.package.list.useQuery({
       limit: 20,
-      cursor: undefined,
-      featured: false,
+      includeInactive: false,
     });
 
-  const { data: locationsData } = trpc.location.getAll.useQuery({});
-
-  const { data: addOns } = trpc.addOn.list.useQuery({
-    limit: 50,
-    cursor: undefined,
+  const { data: locationsData } = trpc.location.list.useQuery({
+    limit: 100,
+    includeInactive: false,
   });
+
+  const { data: addOnsResponse } = trpc.addOn.list.useQuery({
+    limit: 50,
+    includeInactive: false,
+  });
+
+  // Extract the actual data from the response
+  const packages = packagesResponse?.items || [];
+  const addOns = addOnsResponse?.items || [];
+  const locations = locationsData?.items || [];
+
+  // Debug logging for development
+  console.log('Packages Response:', packagesResponse);
+  console.log('Packages Data:', packages);
+  console.log('Packages Error:', packagesError);
+  console.log('Packages Loading:', packagesLoading);
 
   // Get site settings for callback URL
   const { data: siteSettings } = trpc.systemSettings.getSiteSettings.useQuery();
@@ -355,8 +368,8 @@ export default function BookingContainer() {
   const calculateTotalPrice = () => {
     let total = 0;
 
-    if (formData.packageId && packages?.items) {
-      const selectedPackage = packages.items.find(
+    if (formData.packageId && packages) {
+      const selectedPackage = packages.find(
         (p: any) => p.id === formData.packageId
       );
       if (selectedPackage) {
@@ -364,9 +377,9 @@ export default function BookingContainer() {
       }
     }
 
-    if (formData.selectedAddOns && addOns?.items) {
+    if (formData.selectedAddOns && addOns) {
       formData.selectedAddOns.forEach((addOnId) => {
-        const addOn = addOns.items.find((a: any) => a.id === addOnId);
+        const addOn = addOns.find((a: any) => a.id === addOnId);
         if (addOn) {
           total += parseFloat(addOn.price);
         }
@@ -374,8 +387,8 @@ export default function BookingContainer() {
     }
 
     // Add location extra fee
-    if (formData.locationId && locationsData?.locations) {
-      const selectedLocation = locationsData.locations.find(
+    if (formData.locationId && locations) {
+      const selectedLocation = locations.find(
         (loc: any) => loc.id === formData.locationId
       );
       if (selectedLocation && selectedLocation.extraFee) {
@@ -406,7 +419,7 @@ export default function BookingContainer() {
       }
 
       // Get package info for payment
-      const selectedPackage = packages?.items.find(
+      const selectedPackage = packages.find(
         (p: any) => p.id === formData.packageId
       );
       if (!selectedPackage) {
@@ -414,13 +427,13 @@ export default function BookingContainer() {
       }
 
       // Get location info for extra fee
-      const selectedLocation = locationsData?.locations.find(
+      const selectedLocation = locations.find(
         (l: any) => l.id === formData.locationId
       );
 
       // Get selected add-ons info
       const selectedAddOnsData =
-        addOns?.items?.filter((addOn: any) =>
+        addOns?.filter((addOn: any) =>
           formData.selectedAddOns?.includes(addOn.id)
         ) || [];
 
@@ -651,7 +664,7 @@ export default function BookingContainer() {
                 {/* Step 1: Package Selection */}
                 {currentStep === BookingStep.PACKAGE_SELECTION && (
                   <PackageSelectionStep
-                    packages={packages?.items || []}
+                    packages={packages || []}
                     isLoading={packagesLoading}
                     selectedPackageId={formData.packageId}
                     onSelect={(packageId: string) =>
@@ -667,7 +680,7 @@ export default function BookingContainer() {
                     selectedTime={formData.selectedTime}
                     locationId={formData.locationId}
                     staffId={formData.staffId}
-                    locations={locationsData?.locations || []}
+                    locations={locations || []}
                     bookingSettings={bookingSettings}
                     onUpdate={updateFormData}
                   />
@@ -676,7 +689,7 @@ export default function BookingContainer() {
                 {/* Step 3: Add-ons */}
                 {currentStep === BookingStep.ADD_ONS && (
                   <AddOnsStep
-                    addOns={addOns?.items || []}
+                    addOns={addOns || []}
                     selectedAddOns={formData.selectedAddOns || []}
                     onUpdate={(selectedAddOns: string[]) =>
                       updateFormData({ selectedAddOns })
@@ -689,9 +702,9 @@ export default function BookingContainer() {
                   <PaymentStep
                     formData={formData}
                     totalPrice={calculateTotalPrice()}
-                    packages={packages?.items || []}
-                    addOns={addOns?.items || []}
-                    locations={locationsData?.locations || []}
+                    packages={packages || []}
+                    addOns={addOns || []}
+                    locations={locations || []}
                     bookingSettings={bookingSettings}
                     onSubmit={handleBookingSubmit}
                     isLoading={isLoading}

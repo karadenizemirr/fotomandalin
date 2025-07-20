@@ -26,7 +26,7 @@ const staffAvailabilitySchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Geçerli tarih formatı: YYYY-MM-DD"),
   startTime: z.string().regex(/^\d{2}:\d{2}$/, "Geçerli saat formatı: HH:MM"),
   endTime: z.string().regex(/^\d{2}:\d{2}$/, "Geçerli saat formatı: HH:MM"),
-  isAvailable: z.boolean().default(true),
+  isActive: z.boolean().default(true),
   reason: z.string().optional(),
 });
 
@@ -45,18 +45,44 @@ export const staffRouter = router({
       const { locationId, isActive, limit, offset } = input;
 
       const where: any = {};
-      if (locationId) where.locationId = locationId;
+      if (locationId) {
+        where.OR = [
+          { primaryLocationId: locationId },
+          {
+            workingLocations: {
+              some: {
+                locationId: locationId,
+                isActive: true,
+              },
+            },
+          },
+        ];
+      }
       if (isActive !== undefined) where.isActive = isActive;
 
       const [staff, total] = await Promise.all([
         ctx.prisma.staff.findMany({
           where,
           include: {
-            location: {
+            primaryLocation: {
               select: {
                 id: true,
                 name: true,
                 slug: true,
+              },
+            },
+            workingLocations: {
+              include: {
+                location: {
+                  select: {
+                    id: true,
+                    name: true,
+                    slug: true,
+                  },
+                },
+              },
+              where: {
+                isActive: true,
               },
             },
             _count: {
@@ -89,7 +115,27 @@ export const staffRouter = router({
       const staff = await ctx.prisma.staff.findUnique({
         where: { id: input.id },
         include: {
-          location: true,
+          primaryLocation: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
+          },
+          workingLocations: {
+            include: {
+              location: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                },
+              },
+            },
+            where: {
+              isActive: true,
+            },
+          },
           bookings: {
             include: {
               package: {
@@ -105,12 +151,12 @@ export const staffRouter = router({
           },
           staffAvailability: {
             where: {
-              date: {
+              specificDate: {
                 gte: new Date(),
               },
             },
             orderBy: {
-              date: "asc",
+              specificDate: "asc",
             },
             take: 30,
           },
@@ -131,6 +177,8 @@ export const staffRouter = router({
   create: publicProcedure
     .input(staffCreateSchema)
     .mutation(async ({ ctx, input }) => {
+      const { locationId, ...staffData } = input;
+
       // Check if email already exists
       const existingStaff = await ctx.prisma.staff.findUnique({
         where: { email: input.email },
@@ -144,9 +192,9 @@ export const staffRouter = router({
       }
 
       // Validate location if provided
-      if (input.locationId) {
+      if (locationId) {
         const location = await ctx.prisma.location.findUnique({
-          where: { id: input.locationId },
+          where: { id: locationId },
         });
 
         if (!location) {
@@ -158,9 +206,12 @@ export const staffRouter = router({
       }
 
       return await ctx.prisma.staff.create({
-        data: input,
+        data: {
+          ...staffData,
+          primaryLocationId: locationId,
+        },
         include: {
-          location: {
+          primaryLocation: {
             select: {
               id: true,
               name: true,
@@ -175,7 +226,7 @@ export const staffRouter = router({
   update: publicProcedure
     .input(staffUpdateSchema)
     .mutation(async ({ ctx, input }) => {
-      const { id, ...data } = input;
+      const { id, locationId, ...data } = input;
 
       // Check if staff exists
       const existingStaff = await ctx.prisma.staff.findUnique({
@@ -204,9 +255,9 @@ export const staffRouter = router({
       }
 
       // Validate location if provided
-      if (data.locationId) {
+      if (locationId) {
         const location = await ctx.prisma.location.findUnique({
-          where: { id: data.locationId },
+          where: { id: locationId },
         });
 
         if (!location) {
@@ -219,9 +270,12 @@ export const staffRouter = router({
 
       return await ctx.prisma.staff.update({
         where: { id },
-        data,
+        data: {
+          ...data,
+          primaryLocationId: locationId,
+        },
         include: {
-          location: {
+          primaryLocation: {
             select: {
               id: true,
               name: true,
@@ -316,8 +370,15 @@ export const staffRouter = router({
 
       if (locationId) {
         where.OR = [
-          { locationId },
-          { locationId: null }, // Staff without specific location
+          { primaryLocationId: locationId },
+          {
+            workingLocations: {
+              some: {
+                locationId: locationId,
+                isActive: true,
+              },
+            },
+          },
         ];
       }
 
@@ -330,10 +391,23 @@ export const staffRouter = router({
       const allStaff = await ctx.prisma.staff.findMany({
         where,
         include: {
-          location: {
+          primaryLocation: {
             select: {
               id: true,
               name: true,
+            },
+          },
+          workingLocations: {
+            include: {
+              location: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+            where: {
+              isActive: true,
             },
           },
         },
@@ -366,17 +440,15 @@ export const staffRouter = router({
 
       const busyStaffIds = new Set(conflictingBookings.map(b => b.staffId).filter(Boolean));
 
-      // Filter out busy staff
-      const availableStaff = allStaff.filter(staff => !busyStaffIds.has(staff.id));
-
-      return availableStaff;
+      // Filter out busy staff and return available staff
+      return allStaff.filter(staff => !busyStaffIds.has(staff.id));
     }),
 
-  // Set staff availability
+  // Set staff availability for specific date
   setAvailability: publicProcedure
     .input(staffAvailabilitySchema)
     .mutation(async ({ ctx, input }) => {
-      const { staffId, date, startTime, endTime, isAvailable, reason } = input;
+      const { staffId, date, startTime, endTime, isActive } = input;
 
       // Validate staff exists
       const staff = await ctx.prisma.staff.findUnique({
@@ -390,16 +462,11 @@ export const staffRouter = router({
         });
       }
 
-      // Create datetime objects
-      const startDateTime = new Date(`${date}T${startTime}:00`);
-      const endDateTime = new Date(`${date}T${endTime}:00`);
-
       // Check for existing availability record
       const existing = await ctx.prisma.staffAvailability.findFirst({
         where: {
           staffId,
-          date: new Date(date),
-          startTime: startDateTime,
+          specificDate: new Date(date),
         },
       });
 
@@ -407,20 +474,20 @@ export const staffRouter = router({
         return await ctx.prisma.staffAvailability.update({
           where: { id: existing.id },
           data: {
-            endTime: endDateTime,
-            isAvailable,
-            reason,
+            startTime,
+            endTime,
+            isActive,
           },
         });
       } else {
         return await ctx.prisma.staffAvailability.create({
           data: {
             staffId,
-            date: new Date(date),
-            startTime: startDateTime,
-            endTime: endDateTime,
-            isAvailable,
-            reason,
+            dayOfWeek: new Date(date).getDay(), // 0=Sunday, 1=Monday, etc.
+            startTime,
+            endTime,
+            isActive,
+            specificDate: new Date(date),
           },
         });
       }
@@ -441,13 +508,13 @@ export const staffRouter = router({
       return await ctx.prisma.staffAvailability.findMany({
         where: {
           staffId,
-          date: {
+          specificDate: {
             gte: new Date(startDate),
             lte: new Date(endDate),
           },
         },
         orderBy: [
-          { date: "asc" },
+          { specificDate: "asc" },
           { startTime: "asc" },
         ],
       });

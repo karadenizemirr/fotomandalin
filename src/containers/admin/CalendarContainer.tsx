@@ -125,8 +125,26 @@ const CalendarContainer = () => {
   // Handle form submission for create
   const handleCreate = async (data: BookingFormData) => {
     try {
+      // Validate and convert dates properly
+      if (!data.startTime || !data.endTime) {
+        throw new Error("Başlangıç ve bitiş tarihi gereklidir");
+      }
+
       const startTime = new Date(data.startTime);
       const endTime = new Date(data.endTime);
+
+      // Validate dates
+      if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
+        throw new Error("Geçersiz tarih formatı");
+      }
+
+      if (startTime >= endTime) {
+        throw new Error("Bitiş tarihi başlangıç tarihinden sonra olmalıdır");
+      }
+
+      if (startTime < new Date()) {
+        throw new Error("Rezervasyon tarihi geçmiş bir tarih olamaz");
+      }
 
       // Calculate total amount based on package
       const selectedPackage = packagesData?.items?.find(
@@ -134,23 +152,37 @@ const CalendarContainer = () => {
       );
       const totalAmount = selectedPackage?.basePrice || 0;
 
-      await createMutation.mutateAsync({
-        ...data,
+      // Prepare the data for API
+      const reservationData = {
+        packageId: data.packageId,
+        customerName: data.customerName,
+        customerEmail: data.customerEmail,
+        customerPhone: data.customerPhone,
         startTime,
         endTime,
         totalAmount: Number(totalAmount),
-      });
+        locationId: data.locationId || undefined,
+        staffId: data.staffId || undefined,
+        specialNotes: data.specialNotes || undefined,
+      };
+
+      await createMutation.mutateAsync(reservationData);
 
       addToast({
-        message: "Rezervasyon başarıyla oluşturuldu",
         type: "success",
+        title: "Rezervasyon Oluşturuldu!",
+        message: "Yeni rezervasyon başarıyla sisteme eklendi",
+        duration: 4000,
       });
+
       setIsCreateModalOpen(false);
       refetch();
     } catch (error: any) {
       addToast({
-        message: error.message || "Rezervasyon oluşturulurken bir hata oluştu",
         type: "error",
+        title: "Rezervasyon Hatası!",
+        message: error.message || "Rezervasyon oluşturulurken bir hata oluştu",
+        duration: 6000,
       });
     }
   };
@@ -676,6 +708,50 @@ const CalendarContainer = () => {
                 placeholder="Özel istekler, notlar..."
                 rows={3}
               />
+            </div>
+
+            {/* Submit Button Section */}
+            <div className="col-span-1 lg:col-span-2 flex justify-end pt-6 border-t space-x-3">
+              <button
+                type="button"
+                onClick={() => setIsCreateModalOpen(false)}
+                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
+              >
+                İptal
+              </button>
+              <button
+                type="submit"
+                disabled={createMutation.isPending}
+                className="px-6 py-2 text-white bg-orange-500 rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+              >
+                {createMutation.isPending ? (
+                  <div className="flex items-center">
+                    <svg
+                      className="animate-spin -ml-1 mr-3 h-4 w-4 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                      ></path>
+                    </svg>
+                    Rezervasyon oluşturuluyor...
+                  </div>
+                ) : (
+                  "Rezervasyon Oluştur"
+                )}
+              </button>
             </div>
           </div>
         </Form>

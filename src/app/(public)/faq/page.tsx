@@ -1,5 +1,13 @@
-import SiteMetadata from "@/components/organisms/SiteMetadata";
+import { Metadata } from "next";
 import FaqContainer from "@/containers/public/FaqContainer";
+import { generateMetadata as genMeta, pageMetadata } from "@/lib/metadata";
+
+export const metadata: Metadata = genMeta({
+  title: pageMetadata.faq.title,
+  description: pageMetadata.faq.description,
+  keywords: pageMetadata.faq.keywords,
+  url: "/faq",
+});
 
 export default function FaqPage() {
   const faqData = [
@@ -39,21 +47,5 @@ export default function FaqPage() {
     })),
   };
 
-  return (
-    <>
-      <SiteMetadata
-        title="Sıkça Sorulan Sorular"
-        description="Fotomandalin hakkında merak ettikleriniz. Fotoğraf çekimi, rezervasyon, ödeme ve daha fazlası hakkında detaylı bilgiler."
-        keywords="sss, sıkça sorulan sorular, fotoğraf çekimi, rezervasyon, düğün fotoğrafı, fiyatlar"
-        ogImage="/images/faq-og.jpg"
-        canonicalUrl="/faq"
-        customSchema={faqSchema}
-        breadcrumbs={[
-          { name: "Ana Sayfa", url: "/" },
-          { name: "Sıkça Sorulan Sorular", url: "/faq" },
-        ]}
-      />
-      <FaqContainer />
-    </>
-  );
+  return <FaqContainer />;
 }

@@ -187,7 +187,7 @@ export default function HomeContainer() {
                     whileHover={{ y: -10, scale: 1.02 }}
                     className="group relative bg-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300"
                   >
-                    <Link href={`/services/${category.slug}`} className="block">
+                    <Link href={`/hizmetlerimiz`} className="block">
                       <div
                         className={`w-16 h-16 rounded-xl bg-gradient-to-r ${getDefaultColor(
                           index
@@ -231,7 +231,7 @@ export default function HomeContainer() {
             className="text-center mt-12"
           >
             <Link
-              href="/services"
+              href="/hizmetlerimiz"
               className="inline-flex items-center px-8 py-4 bg-black text-white font-semibold rounded-xl hover:bg-gray-800 transition-colors duration-300 group"
             >
               Tüm Hizmetleri Gör
@@ -337,13 +337,13 @@ export default function HomeContainer() {
         buttons={[
           {
             text: "Rezervasyon Yap",
-            href: "/booking",
+            href: "/rezervasyon",
             variant: "primary",
             icon: ArrowRight,
           },
           {
             text: "Ücretsiz Danışmanlık",
-            href: "/contact",
+            href: "/iletisim",
             variant: "secondary",
           },
         ]}

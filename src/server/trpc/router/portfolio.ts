@@ -12,7 +12,18 @@ const createPortfolioSchema = z.object({
   tags: z.array(z.string()).default([]),
   isPublished: z.boolean().default(false),
   isFeatured: z.boolean().default(false),
-  eventDate: z.date().optional(),
+  eventDate: z.string().transform((val, ctx) => {
+    if (!val || val === '') return undefined;
+    const date = new Date(val);
+    if (isNaN(date.getTime())) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Geçersiz tarih formatı",
+      });
+      return z.NEVER;
+    }
+    return date;
+  }).optional(),
   location: z.string().optional(),
   metaTitle: z.string().optional(),
   metaDescription: z.string().optional(),

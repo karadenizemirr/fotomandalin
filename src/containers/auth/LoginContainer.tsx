@@ -4,7 +4,7 @@ import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { z } from "zod";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import Form from "@/components/organisms/form/Form";
 import {
   TextField,
@@ -29,8 +29,8 @@ function LoginForm() {
   const searchParams: any = useSearchParams();
   const { addToast } = useToast();
 
-  // Get callbackUrl from query parameters or default to dashboard
-  const callbackUrl = searchParams.get("callbackUrl") || "/panel";
+  // Get callbackUrl from query parameters or default based on user role
+  const callbackUrl = searchParams.get("callbackUrl");
 
   const handleLogin = async (data: LoginFormData) => {
     setIsLoading(true);
@@ -42,12 +42,24 @@ function LoginForm() {
         redirect: false,
         email: data.email,
         password: data.password,
-        callbackUrl,
       });
 
       if (result?.error) {
         throw new Error(result.error || "Giriş işlemi başarısız oldu");
       }
+
+      // Get user session to determine role
+      const session = await getSession();
+
+      // Determine redirect URL based on user role
+      let redirectUrl = "/"; // Default to homepage
+
+      if (session?.user?.role === "ADMIN") {
+        redirectUrl = "/dashboard";
+      }
+
+      // Use callbackUrl if provided, otherwise use role-based redirect
+      const finalRedirectUrl = callbackUrl || redirectUrl;
 
       // Success - show toast and redirect
       addToast({
@@ -57,8 +69,8 @@ function LoginForm() {
         duration: 3000,
       });
 
-      // Redirect to callbackUrl or dashboard
-      router.push(result?.url || callbackUrl);
+      // Redirect to appropriate page
+      router.push(finalRedirectUrl);
     } catch (err) {
       setError(
         err instanceof Error

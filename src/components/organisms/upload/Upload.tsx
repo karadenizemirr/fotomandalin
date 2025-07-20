@@ -54,10 +54,15 @@ export default function Upload({
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Update files when initialFiles change
+  // Update files when initialFiles change - memoize initialFiles to prevent infinite loops
+  const memoizedInitialFiles = React.useMemo(
+    () => initialFiles,
+    [initialFiles.length, initialFiles.map((f) => f.id).join(",")]
+  );
+
   useEffect(() => {
-    setFiles(initialFiles);
-  }, [initialFiles]);
+    setFiles(memoizedInitialFiles);
+  }, [memoizedInitialFiles]);
 
   // Get upload config based on preset or custom config
   const uploadConfig = React.useMemo(() => {
@@ -74,15 +79,17 @@ export default function Upload({
 
       const fileArray = Array.from(selectedFiles);
 
-      // Check max files limit
-      if (files.length + fileArray.length > maxFiles) {
-        console.warn(`En fazla ${maxFiles} dosya yükleyebilirsiniz`);
-        return;
-      }
-
       setIsUploading(true);
 
-      try {
+      // Use functional update to access current files state
+      setFiles((currentFiles) => {
+        // Check max files limit with current state
+        if (currentFiles.length + fileArray.length > maxFiles) {
+          console.warn(`En fazla ${maxFiles} dosya yükleyebilirsiniz`);
+          setIsUploading(false);
+          return currentFiles;
+        }
+
         // Create initial file entries with uploading status
         const initialFiles: UploadedFile[] = fileArray.map((file) => ({
           id: Date.now() + Math.random().toString(),
@@ -95,35 +102,44 @@ export default function Upload({
           progress: 0,
         }));
 
-        // Add to state immediately
-        const newFiles = [...files, ...initialFiles];
-        setFiles(newFiles);
+        // Return new state with uploaded files
+        return [...currentFiles, ...initialFiles];
+      });
 
+      try {
         // Upload files
         const uploadedFiles = await uploadService.uploadFiles(
           fileArray,
           uploadConfig
         );
 
-        // Update state with results
-        const finalFiles = newFiles.map((file, index) => {
-          if (index >= files.length) {
-            // This is one of the newly uploaded files
-            const uploadIndex = index - files.length;
-            return uploadedFiles[uploadIndex] || file;
-          }
-          return file;
+        // Update state with results using functional update
+        setFiles((currentFiles) => {
+          const newFiles = [...currentFiles];
+          const uploadingStartIndex = currentFiles.length - fileArray.length;
+
+          uploadedFiles.forEach((uploadedFile, index) => {
+            const targetIndex = uploadingStartIndex + index;
+            if (targetIndex >= 0 && targetIndex < newFiles.length) {
+              newFiles[targetIndex] = uploadedFile;
+            }
+          });
+
+          return newFiles;
         });
 
-        setFiles(finalFiles);
         onUpload?.(uploadedFiles.filter((f) => f.status === "success"));
       } catch (error) {
         console.error("Upload error:", error);
+        // Reset uploading files on error
+        setFiles((currentFiles) =>
+          currentFiles.filter((file) => file.status !== "uploading")
+        );
       } finally {
         setIsUploading(false);
       }
     },
-    [files, maxFiles, disabled, isUploading, uploadConfig, onUpload]
+    [maxFiles, disabled, isUploading, uploadConfig, onUpload]
   );
 
   const handleDragOver = useCallback(

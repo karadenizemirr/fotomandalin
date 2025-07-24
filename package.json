@@ -16,7 +16,11 @@
     "db:migrate": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "clean": "rm -rf .next node_modules/.cache",
-    "analyze": "cross-env ANALYZE=true npm run build"
+    "analyze": "cross-env ANALYZE=true npm run build",
+    "deploy:check": "bash ./scripts/check-env.sh",
+    "deploy:setup": "bash ./scripts/ec2-setup.sh",
+    "docker:prod": "docker-compose -f docker-compose.prod.yml up --build -d",
+    "docker:dev": "docker-compose up --build -d"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.848.0",

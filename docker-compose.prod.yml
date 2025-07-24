@@ -1,0 +1,72 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: fotomandalin_postgres_prod
+    restart: always
+    environment:
+      POSTGRES_DB: fotomandalin
+      POSTGRES_USER: fotomandalin_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fotomandalin_secure_password}
+    volumes:
+      - pgdata_prod:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - fotomandalin_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fotomandalin_user -d fotomandalin"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  web:
+    image: ghcr.io/karadenizemirr/fotomandalin:latest
+    container_name: fotomandalin_web_prod
+    restart: always
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+    ports:
+      - "3000:3000"
+    volumes:
+      - uploads_prod:/app/public/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - fotomandalin_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  nginx:
+    image: nginx:alpine
+    container_name: fotomandalin_nginx_prod
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - uploads_prod:/var/www/uploads:ro
+    depends_on:
+      web:
+        condition: service_healthy
+    networks:
+      - fotomandalin_network
+
+volumes:
+  pgdata_prod:
+    driver: local
+  uploads_prod:
+    driver: local
+
+networks:
+  fotomandalin_network:
+    driver: bridge

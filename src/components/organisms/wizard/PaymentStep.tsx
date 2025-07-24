@@ -174,7 +174,7 @@ export default function PaymentStep({
                 <div className="flex justify-between">
                   <span className="text-gray-600">Toplam Süre:</span>
                   <span className="text-gray-900">
-                    {Math.floor(totalDuration / 60)}$
+                    {Math.floor(totalDuration / 60)}
                     {totalDuration % 60 > 0
                       ? `.${Math.round(((totalDuration % 60) / 60) * 10)}`
                       : ""}{" "}

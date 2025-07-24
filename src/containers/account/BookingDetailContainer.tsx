@@ -121,7 +121,7 @@ export default function BookingDetailContainer({
             Aradığınız rezervasyon mevcut değil veya erişim yetkiniz bulunmuyor.
           </p>
           <Link
-            href="/account/bookings"
+            href="/hesabim/rezervasyonlarim"
             className="inline-flex items-center px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -140,7 +140,7 @@ export default function BookingDetailContainer({
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Link
-                href="/account/bookings"
+                href="/hesabim/rezervasyonlarim"
                 className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center hover:bg-gray-200 transition-colors"
               >
                 <ArrowLeft className="w-5 h-5 text-gray-600" />
@@ -348,8 +348,7 @@ export default function BookingDetailContainer({
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Paket Ücreti</span>
                   <span className="font-medium">
-                    ₺
-                    {formatDecimal(booking.package?.basePrice)}
+                    ₺{formatDecimal(booking.package?.basePrice)}
                   </span>
                 </div>
 

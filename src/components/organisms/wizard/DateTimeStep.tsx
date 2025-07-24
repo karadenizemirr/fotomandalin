@@ -10,44 +10,38 @@ export default function DateTimeStep({
   staffId: _staffId,
   locations,
   bookingSettings,
+  packages, // Add packages prop to get selected package duration
+  selectedPackageId, // Add selected package id
   onUpdate,
 }: any) {
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
   const [isLoadingTimes, setIsLoadingTimes] = useState(false);
 
-  // Generate available time slots based on location working hours
+  // Generate available time slots based on location working hours and package duration
   const generateAvailableTimes = useCallback(
     (date: string, locId?: string): string[] => {
       const times: string[] = [];
       const selectedDateObj = new Date(date);
       const today = new Date();
 
-      // Get day of week in lowercase format
-      const dayNames = [
-        "sunday",
-        "monday",
-        "tuesday",
-        "wednesday",
-        "thursday",
-        "friday",
-        "saturday",
-      ];
-      const dayOfWeek = dayNames[selectedDateObj.getDay()];
+      // Get selected package duration
+      let sessionDuration = 120; // Default 2 hours in minutes
+      if (selectedPackageId && packages && packages.length > 0) {
+        const selectedPackage = packages.find(
+          (pkg: any) => pkg.id === selectedPackageId
+        );
+        if (selectedPackage && selectedPackage.durationInMinutes) {
+          sessionDuration = selectedPackage.durationInMinutes;
+        }
+      }
 
       // Get selected location's working hours
       let workingHours = null;
       if (locId && locations.length > 0) {
         const selectedLocation = locations.find((loc: any) => loc.id === locId);
         if (selectedLocation && selectedLocation.workingHours) {
-          try {
-            const parsedHours =
-              typeof selectedLocation.workingHours === "string"
-                ? JSON.parse(selectedLocation.workingHours)
-                : selectedLocation.workingHours;
-            workingHours = parsedHours[dayOfWeek];
-          } catch {
-            console.error("Error parsing working hours");
-          }
+          // Location working hours are stored as { start: "09:00", end: "23:00" }
+          workingHours = selectedLocation.workingHours;
         }
       }
 
@@ -65,18 +59,44 @@ export default function DateTimeStep({
       }
 
       // Parse start and end times
-      const [startHour] = workingHours.start.split(":").map(Number);
-      const [endHour] = workingHours.end.split(":").map(Number);
+      const [startHour, startMinute] = workingHours.start
+        .split(":")
+        .map(Number);
+      const [endHour, endMinute] = workingHours.end.split(":").map(Number);
 
-      // Generate time slots every 2 hours
-      for (let hour = startHour; hour <= endHour - 2; hour += 2) {
-        const timeSlot = `${hour.toString().padStart(2, "0")}:00`;
+      // Generate time slots with system settings intervals
+      const startTimeInMinutes = startHour * 60 + startMinute;
+      const endTimeInMinutes = endHour * 60 + endMinute;
+
+      // Use booking settings for slot intervals, default to 2 hours (120 minutes)
+      const intervalMinutes = bookingSettings?.slotIntervalMinutes || 120;
+
+      for (
+        let timeInMinutes = startTimeInMinutes;
+        timeInMinutes <= endTimeInMinutes; // Changed back to <= to include end time (23:00)
+        timeInMinutes += intervalMinutes
+      ) {
+        const hour = Math.floor(timeInMinutes / 60);
+        const minute = timeInMinutes % 60;
+        const timeSlot = `${hour.toString().padStart(2, "0")}:${minute
+          .toString()
+          .padStart(2, "0")}`;
+
+        // Allow the end time slot (like 23:00) to be selectable even if session extends beyond working hours
+        // Only check if start time is within working hours
+        if (timeInMinutes > endTimeInMinutes) {
+          break; // Don't add slots that start beyond working hours
+        }
 
         // If it's today, only show future time slots based on booking settings
         if (selectedDateObj.toDateString() === today.toDateString()) {
           const currentHour = today.getHours();
+          const currentMinute = today.getMinutes();
+          const currentTimeInMinutes = currentHour * 60 + currentMinute;
           const minimumHours = bookingSettings?.minimumBookingHours || 1;
-          if (hour <= currentHour + minimumHours) {
+          const minimumTimeInMinutes = currentTimeInMinutes + minimumHours * 60;
+
+          if (timeInMinutes <= minimumTimeInMinutes) {
             continue; // Respect minimum booking hours from settings
           }
         }
@@ -84,9 +104,21 @@ export default function DateTimeStep({
         times.push(timeSlot);
       }
 
+      // Ensure we have at least some slots even if working hours are short
+      if (
+        times.length === 0 &&
+        selectedDateObj.toDateString() !== today.toDateString()
+      ) {
+        // Add the start time as the only option if no other slots are available
+        const startTimeSlot = `${startHour
+          .toString()
+          .padStart(2, "0")}:${startMinute.toString().padStart(2, "0")}`;
+        times.push(startTimeSlot);
+      }
+
       return times;
     },
-    [locations, bookingSettings]
+    [locations, bookingSettings, packages, selectedPackageId]
   );
 
   // Update available times when date or location changes
@@ -125,9 +157,11 @@ export default function DateTimeStep({
   }, [
     selectedDate,
     locationId,
+    selectedPackageId,
     availableTimes.length,
     generateAvailableTimes,
     locations,
+    packages,
   ]);
 
   // Get selected location details for display
@@ -142,23 +176,10 @@ export default function DateTimeStep({
 
     try {
       const selectedDateObj = new Date(selectedDate);
-      const dayNames = [
-        "sunday",
-        "monday",
-        "tuesday",
-        "wednesday",
-        "thursday",
-        "friday",
-        "saturday",
-      ];
-      const dayOfWeek = dayNames[selectedDateObj.getDay()];
-      const parsedHours =
-        typeof location.workingHours === "string"
-          ? JSON.parse(location.workingHours)
-          : location.workingHours;
-      const dayHours = parsedHours[dayOfWeek];
+      const workingHours = location.workingHours;
 
-      if (!dayHours) {
+      // Check if location has working hours for the day
+      if (!workingHours || !workingHours.start || !workingHours.end) {
         return {
           closed: true,
           dayName: selectedDateObj.toLocaleDateString("tr-TR", {
@@ -169,8 +190,8 @@ export default function DateTimeStep({
 
       return {
         closed: false,
-        start: dayHours.start,
-        end: dayHours.end,
+        start: workingHours.start,
+        end: workingHours.end,
         dayName: selectedDateObj.toLocaleDateString("tr-TR", {
           weekday: "long",
         }),
@@ -235,7 +256,9 @@ export default function DateTimeStep({
                 {locations.map((location: any) => (
                   <option key={location.id} value={location.id}>
                     {location.name}{" "}
-                    {location.extraFee > 0 && `(+₺${location.extraFee})`}
+                    {location.extraFee &&
+                      parseFloat(location.extraFee) > 0 &&
+                      `(+₺${location.extraFee})`}
                   </option>
                 ))}
               </select>
@@ -280,6 +303,15 @@ export default function DateTimeStep({
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 Saat Seçimi *
               </label>
+
+              {/* Working hours info */}
+              {locationWorkingInfo && !locationWorkingInfo.closed && (
+                <div className="mb-3 text-xs text-gray-500">
+                  Çalışma saatleri: {locationWorkingInfo.start} -{" "}
+                  {locationWorkingInfo.end}
+                </div>
+              )}
+
               {isLoadingTimes ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div>
@@ -296,24 +328,28 @@ export default function DateTimeStep({
                   <p className="text-gray-500">
                     {locationWorkingInfo?.closed
                       ? "Seçilen lokasyon bu gün kapalıdır"
-                      : "Lütfen farklı bir tarih seçiniz"}
+                      : "Lütfen farklı bir tarih seçiniz veya lokasyon değiştirin"}
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-3 max-h-80 overflow-y-auto">
-                  {availableTimes.map((time) => (
-                    <button
-                      key={time}
-                      onClick={() => handleTimeChange(time)}
-                      className={`p-3 rounded-lg border-2 transition-all duration-200 text-center ${
-                        selectedTime === time
-                          ? "border-orange-500 bg-orange-50 text-orange-700 font-medium"
-                          : "border-gray-200 hover:border-orange-300 hover:bg-orange-50 text-gray-700"
-                      }`}
-                    >
-                      {time}
-                    </button>
-                  ))}
+                <div className="space-y-3">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-80 overflow-y-auto">
+                    {availableTimes.map((time, index) => {
+                      return (
+                        <button
+                          key={time}
+                          onClick={() => handleTimeChange(time)}
+                          className={`py-2 px-3 rounded-lg text-sm font-medium transition-all duration-150 ${
+                            selectedTime === time
+                              ? "bg-orange-500 text-white shadow-sm"
+                              : "bg-gray-100 text-gray-700 hover:bg-orange-100 hover:text-orange-700"
+                          }`}
+                        >
+                          {time}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
@@ -341,30 +377,113 @@ export default function DateTimeStep({
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <div className="flex items-start">
                 <CheckCircle className="w-5 h-5 text-green-600 mr-3 mt-0.5" />
-                <div>
+                <div className="flex-1">
                   <p className="text-sm font-medium text-green-800">
-                    Seçilen Tarih ve Saat
+                    Rezervasyon Özeti
                   </p>
-                  <p className="text-sm text-green-600 mt-1">
-                    <span className="font-medium">
-                      {new Date(selectedDate).toLocaleDateString("tr-TR", {
-                        weekday: "long",
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
-                    </span>
-                    <br />
-                    Saat: {selectedTime}
-                    <br />
-                    Lokasyon: {selectedLocation?.name}
-                    {selectedLocation?.extraFee > 0 && (
-                      <span className="text-orange-600">
-                        {" "}
-                        (+₺{selectedLocation.extraFee})
+                  <div className="text-sm text-green-600 mt-2 space-y-1">
+                    <div className="flex justify-between">
+                      <span className="font-medium">Tarih:</span>
+                      <span>
+                        {new Date(selectedDate).toLocaleDateString("tr-TR", {
+                          weekday: "long",
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
                       </span>
-                    )}
-                  </p>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Başlangıç:</span>
+                      <span>{selectedTime}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Tahmini Bitiş:</span>
+                      <span>
+                        {(() => {
+                          const [hour, minute] = selectedTime
+                            .split(":")
+                            .map(Number);
+
+                          // Get actual session duration from selected package
+                          let sessionDuration = 120; // Default 2 hours
+                          if (
+                            selectedPackageId &&
+                            packages &&
+                            packages.length > 0
+                          ) {
+                            const selectedPackage = packages.find(
+                              (pkg: any) => pkg.id === selectedPackageId
+                            );
+                            if (
+                              selectedPackage &&
+                              selectedPackage.durationInMinutes
+                            ) {
+                              sessionDuration =
+                                selectedPackage.durationInMinutes;
+                            }
+                          }
+
+                          const endHour = Math.floor(
+                            (hour * 60 + minute + sessionDuration) / 60
+                          );
+                          const endMinute =
+                            (hour * 60 + minute + sessionDuration) % 60;
+                          return `${endHour
+                            .toString()
+                            .padStart(2, "0")}:${endMinute
+                            .toString()
+                            .padStart(2, "0")}`;
+                        })()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Lokasyon:</span>
+                      <span>{selectedLocation?.name}</span>
+                    </div>
+                    {selectedLocation?.extraFee &&
+                      parseFloat(selectedLocation.extraFee) > 0 && (
+                        <div className="flex justify-between">
+                          <span className="font-medium">Lokasyon Ücreti:</span>
+                          <span className="text-orange-600 font-semibold">
+                            +₺{selectedLocation.extraFee}
+                          </span>
+                        </div>
+                      )}
+                    <div className="pt-2 border-t border-green-200 mt-3">
+                      <div className="flex justify-between">
+                        <span className="font-medium">Çekim Süresi:</span>
+                        <span className="text-green-700 font-semibold">
+                          {(() => {
+                            // Get actual session duration from selected package
+                            if (
+                              selectedPackageId &&
+                              packages &&
+                              packages.length > 0
+                            ) {
+                              const selectedPackage = packages.find(
+                                (pkg: any) => pkg.id === selectedPackageId
+                              );
+                              if (
+                                selectedPackage &&
+                                selectedPackage.durationInMinutes
+                              ) {
+                                const hours = Math.floor(
+                                  selectedPackage.durationInMinutes / 60
+                                );
+                                const minutes =
+                                  selectedPackage.durationInMinutes % 60;
+                                return `${hours > 0 ? `${hours} saat` : ""} ${
+                                  minutes > 0 ? `${minutes} dakika` : ""
+                                }`.trim();
+                              }
+                            }
+                            return "~2 saat";
+                          })()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

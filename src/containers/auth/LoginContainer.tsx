@@ -3,6 +3,7 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { z } from "zod";
 import { signIn, getSession } from "next-auth/react";
 import Form from "@/components/organisms/form/Form";
@@ -12,6 +13,7 @@ import {
   CheckboxField,
 } from "@/components/organisms/form/FormField";
 import { useToast } from "@/components/ui/toast/toast";
+import { useSettingsData } from "@/hooks/useSettings";
 
 // Zod validation schema
 const loginSchema = z.object({
@@ -28,6 +30,9 @@ function LoginForm() {
   const router = useRouter();
   const searchParams: any = useSearchParams();
   const { addToast } = useToast();
+
+  // Get settings data for logo
+  const { siteSettings, siteLoading } = useSettingsData();
 
   // Get callbackUrl from query parameters or default based on user role
   const callbackUrl = searchParams.get("callbackUrl");
@@ -123,12 +128,19 @@ function LoginForm() {
           {/* Header */}
           <div>
             <Link href="/" className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-black rounded-sm flex items-center justify-center">
-                <span className="text-white font-bold text-lg">F</span>
-              </div>
-              <span className="text-2xl font-semibold text-black font-mono">
-                Fotomandalin
-              </span>
+              {siteSettings?.logo && !siteLoading ? (
+                <Image
+                  src={siteSettings.logo}
+                  alt="Fotomandalin Logo"
+                  width={200}
+                  height={200}
+                  className="rounded-sm object-contain"
+                />
+              ) : (
+                <div className="w-10 h-10 bg-black rounded-sm flex items-center justify-center">
+                  <span className="text-white font-bold text-lg">F</span>
+                </div>
+              )}
             </Link>
             <h2 className="mt-6 text-3xl font-bold text-gray-900 font-mono">
               Giriş Yapın
@@ -391,11 +403,21 @@ function LoginForm() {
             {/* Brand Footer */}
             <div className="mt-auto pt-8 text-center">
               <div className="inline-flex items-center space-x-2 mb-2">
-                <div className="w-8 h-8 bg-amber-500 rounded-sm flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">F</span>
-                </div>
+                {siteSettings?.logo && !siteLoading ? (
+                  <Image
+                    src={siteSettings.logo}
+                    alt="Fotomandalin Logo"
+                    width={32}
+                    height={32}
+                    className="rounded-sm object-contain"
+                  />
+                ) : (
+                  <div className="w-8 h-8 bg-amber-500 rounded-sm flex items-center justify-center">
+                    <span className="text-white font-bold text-sm">F</span>
+                  </div>
+                )}
                 <span className="text-xl font-semibold text-white">
-                  Fotomandalin
+                  {siteSettings?.siteName || "Fotomandalin"}
                 </span>
               </div>
               <p className="text-sm text-gray-400">

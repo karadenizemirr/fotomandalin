@@ -22,10 +22,22 @@ export default function FormProvider({
   onSubmit,
   className = "",
 }: FormProviderProps) {
+  const handleFormSubmit = async (data: any) => {
+    console.log("DEBUG: Form submitting with data:", data);
+    console.log("DEBUG: Form errors:", methods.formState.errors);
+    console.log("DEBUG: Form isValid:", methods.formState.isValid);
+
+    try {
+      await onSubmit(data);
+    } catch (error) {
+      console.error("DEBUG: Form submission error:", error);
+    }
+  };
+
   return (
     <HookFormProvider {...methods}>
       <form
-        onSubmit={methods.handleSubmit(onSubmit)}
+        onSubmit={methods.handleSubmit(handleFormSubmit)}
         className={className}
         noValidate
       >

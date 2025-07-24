@@ -137,7 +137,6 @@ export default function ServiceCategoryContainer() {
         message: "Kategori başarıyla oluşturuldu",
         type: "success",
       });
-      setIsModalOpen(false);
       refetch();
     },
     onError: (error: any) => {
@@ -156,8 +155,6 @@ export default function ServiceCategoryContainer() {
         message: "Kategori başarıyla güncellendi",
         type: "success",
       });
-      setIsModalOpen(false);
-      setEditingCategory(null);
       refetch();
     },
     onError: (error: any) => {
@@ -188,43 +185,6 @@ export default function ServiceCategoryContainer() {
   });
 
   // Form handlers
-  const handleCreateCategory = async (data: CategoryFormData) => {
-    try {
-      // Ensure slug is always present
-      const categoryData = {
-        ...data,
-        slug: data.slug || generateSlug(data.name || ""),
-      };
-      await createCategoryMutation.mutateAsync(categoryData);
-      setIsModalOpen(false);
-      setUploadedImage(null);
-      setIsImageRemoved(false);
-    } catch (error) {
-      console.error("Create category error:", error);
-    }
-  };
-
-  const handleUpdateCategory = async (data: CategoryUpdateData) => {
-    if (!editingCategory) return;
-    try {
-      // Ensure slug is always present
-      const categoryData = {
-        ...data,
-        slug: data.slug || generateSlug(data.name || ""),
-      };
-      await updateCategoryMutation.mutateAsync({
-        ...categoryData,
-        id: editingCategory.id,
-      });
-      setIsModalOpen(false);
-      setEditingCategory(null);
-      setUploadedImage(null);
-      setIsImageRemoved(false);
-    } catch (error) {
-      console.error("Update category error:", error);
-    }
-  };
-
   const handleDeleteCategory = async (categoryId: string) => {
     await deleteCategoryMutation.mutateAsync({ id: categoryId });
     setDeleteConfirm({ isOpen: false, categoryId: "", categoryName: "" });
@@ -236,46 +196,69 @@ export default function ServiceCategoryContainer() {
 
   // Form submit handler
   const handleFormSubmit = async (data: any) => {
-    // Auto-generate slug if not provided or empty
-    const finalSlug =
-      data.slug && data.slug.trim()
-        ? data.slug.trim()
-        : generateSlug(data.name || "");
-
-    // Handle image: if removed, set to undefined, otherwise use uploaded or existing image
-    const imageUrl = isImageRemoved
-      ? undefined
-      : uploadedImage?.url || data.image || undefined;
-
-    // Clean up empty strings by converting them to undefined
-    const cleanFormData = {
-      ...data,
-      image: imageUrl && imageUrl.trim() ? imageUrl.trim() : undefined,
-      slug: finalSlug, // Ensure slug is always a string
-      sortOrder: Number(data.sortOrder) || 0, // Convert sortOrder to number
-      description:
-        data.description && data.description.trim()
-          ? data.description.trim()
-          : undefined,
-      icon: data.icon && data.icon.trim() ? data.icon.trim() : undefined,
-      metaTitle:
-        data.metaTitle && data.metaTitle.trim()
-          ? data.metaTitle.trim()
-          : undefined,
-      metaDescription:
-        data.metaDescription && data.metaDescription.trim()
-          ? data.metaDescription.trim()
-          : undefined,
-    };
+    console.log("DEBUG: Category form submit triggered with data:", data);
+    console.log("DEBUG: Editing category:", editingCategory);
+    console.log("DEBUG: Uploaded image:", uploadedImage);
+    console.log("DEBUG: Is image removed:", isImageRemoved);
 
     try {
+      // Add id for update operations
       if (editingCategory) {
-        await handleUpdateCategory(cleanFormData);
-      } else {
-        await handleCreateCategory(cleanFormData);
+        data.id = editingCategory.id;
       }
-    } catch (error) {
-      console.error("Form submit error:", error);
+
+      // Auto-generate slug if not provided or empty
+      const finalSlug =
+        data.slug && data.slug.trim()
+          ? data.slug.trim()
+          : generateSlug(data.name || "");
+
+      // Handle image: if removed, set to undefined, otherwise use uploaded or existing image
+      const imageUrl = isImageRemoved
+        ? undefined
+        : uploadedImage?.url || data.image || undefined;
+
+      // Clean up empty strings by converting them to undefined
+      const cleanFormData = {
+        ...data,
+        image: imageUrl && imageUrl.trim() ? imageUrl.trim() : undefined,
+        slug: finalSlug, // Ensure slug is always a string
+        sortOrder: Number(data.sortOrder) || 0, // Convert sortOrder to number
+        description:
+          data.description && data.description.trim()
+            ? data.description.trim()
+            : undefined,
+        icon: data.icon && data.icon.trim() ? data.icon.trim() : undefined,
+        metaTitle:
+          data.metaTitle && data.metaTitle.trim()
+            ? data.metaTitle.trim()
+            : undefined,
+        metaDescription:
+          data.metaDescription && data.metaDescription.trim()
+            ? data.metaDescription.trim()
+            : undefined,
+      };
+
+      console.log("DEBUG: Category payload to submit:", cleanFormData);
+
+      if (editingCategory) {
+        // Update existing category
+        await updateCategoryMutation.mutateAsync(cleanFormData);
+        console.log("DEBUG: Category updated successfully");
+      } else {
+        // Create new category
+        await createCategoryMutation.mutateAsync(cleanFormData);
+        console.log("DEBUG: Category created successfully");
+      }
+
+      // Reset state after successful operation
+      setIsModalOpen(false);
+      setEditingCategory(null);
+      setUploadedImage(null);
+      setIsImageRemoved(false);
+    } catch (error: any) {
+      console.error("DEBUG: Category form submit failed:", error);
+      // Error will be handled by the mutation's onError callback
     }
   }; // Close modal handler
   const handleCloseModal = () => {
@@ -288,6 +271,10 @@ export default function ServiceCategoryContainer() {
   // Form default values
   const getDefaultValues = () => {
     if (editingCategory) {
+      console.log(
+        "DEBUG: Getting default values for editingCategory:",
+        editingCategory
+      );
       return {
         name: editingCategory.name,
         slug: editingCategory.slug,
@@ -449,7 +436,27 @@ export default function ServiceCategoryContainer() {
       label: "Düzenle",
       icon: <Edit className="w-4 h-4" />,
       onClick: (record: CategoryTableData) => {
+        console.log("DEBUG: Edit button clicked for category:", record);
         setEditingCategory(record);
+        setIsImageRemoved(false); // Reset image removed state
+
+        // Set existing image if available
+        if (record.image && record.image.trim() !== "") {
+          console.log("DEBUG: Setting existing category image:", record.image);
+          setUploadedImage({
+            id: "existing-image",
+            name: "Kategori Resmi",
+            size: 0,
+            type: "image/jpeg",
+            url: record.image,
+            uploadedAt: new Date(),
+            status: "success" as const,
+          });
+        } else {
+          console.log("DEBUG: No existing category image found");
+          setUploadedImage(null);
+        }
+
         setIsModalOpen(true);
       },
       variant: "primary" as const,
@@ -604,9 +611,16 @@ export default function ServiceCategoryContainer() {
       >
         <Form
           key={editingCategory?.id || "new"}
-          schema={editingCategory ? categoryUpdateSchema : categoryCreateSchema}
+          schema={categoryCreateSchema}
           defaultValues={getDefaultValues()}
-          onSubmit={handleFormSubmit}
+          onSubmit={(data) => {
+            console.log(
+              "DEBUG: Category form onSubmit called with data:",
+              data
+            );
+            console.log("DEBUG: Is editing category:", !!editingCategory);
+            return handleFormSubmit(data);
+          }}
         >
           <div className="space-y-6">
             {/* Basic Information */}

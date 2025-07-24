@@ -69,21 +69,25 @@ export default function BookingContainer() {
   const { addToast } = useToast();
 
   // tRPC hooks - Doğru endpoint adları kullanılıyor
-  const { data: packagesResponse, isLoading: packagesLoading, error: packagesError } =
-    trpc.package.list.useQuery({
-      limit: 20,
-      includeInactive: false,
-    });
+  const {
+    data: packagesResponse,
+    isLoading: packagesLoading,
+    error: packagesError,
+  } = trpc.package.list.useQuery({
+    limit: 20,
+    includeInactive: false,
+  });
 
   const { data: locationsData } = trpc.location.list.useQuery({
     limit: 100,
     includeInactive: false,
   });
 
-  const { data: addOnsResponse, isLoading: addOnsLoading } = trpc.addOn.list.useQuery({
-    limit: 50,
-    includeInactive: false,
-  });
+  const { data: addOnsResponse, isLoading: addOnsLoading } =
+    trpc.addOn.list.useQuery({
+      limit: 50,
+      includeInactive: false,
+    });
 
   // Extract the actual data from the response
   const packages = packagesResponse?.items || [];
@@ -91,23 +95,26 @@ export default function BookingContainer() {
   const locations = locationsData?.items || [];
 
   // Debug logging for development - AddOns için detaylı log
-  console.log('Packages Response:', packagesResponse);
-  console.log('Packages Data:', packages);
-  console.log('Packages Error:', packagesError);
-  console.log('Packages Loading:', packagesLoading);
+  console.log("Packages Response:", packagesResponse);
+  console.log("Packages Data:", packages);
+  console.log("Packages Error:", packagesError);
+  console.log("Packages Loading:", packagesLoading);
 
   // AddOns için detaylı debug logging
-  console.log('AddOns Response:', addOnsResponse);
-  console.log('AddOns Data:', addOns);
-  console.log('AddOns Count:', addOns?.length || 0);
-  console.log('AddOns Loading:', trpc.addOn.list.useQuery({
-    limit: 50,
-    includeInactive: false,
-  }).isLoading);
+  console.log("AddOns Response:", addOnsResponse);
+  console.log("AddOns Data:", addOns);
+  console.log("AddOns Count:", addOns?.length || 0);
+  console.log(
+    "AddOns Loading:",
+    trpc.addOn.list.useQuery({
+      limit: 50,
+      includeInactive: false,
+    }).isLoading
+  );
 
   // Her addOn'u ayrıntılı logla
   if (addOns && addOns.length > 0) {
-    console.log('AddOns Individual Items:');
+    console.log("AddOns Individual Items:");
     addOns.forEach((addOn: any, index: number) => {
       console.log(`AddOn ${index}:`, {
         id: addOn.id,
@@ -115,11 +122,11 @@ export default function BookingContainer() {
         price: addOn.price,
         description: addOn.description,
         isActive: addOn.isActive,
-        durationInMinutes: addOn.durationInMinutes
+        durationInMinutes: addOn.durationInMinutes,
       });
     });
   } else {
-    console.warn('AddOns array is empty or undefined');
+    console.warn("AddOns array is empty or undefined");
   }
 
   // Get site settings for callback URL
@@ -185,7 +192,7 @@ export default function BookingContainer() {
 
           <div className="space-y-3">
             <button
-              onClick={() => router.push("/login")}
+              onClick={() => router.push("/giris-yap")}
               className="w-full bg-black text-white py-3 px-6 rounded-lg hover:bg-gray-800 transition-colors font-medium flex items-center justify-center space-x-2"
             >
               <LogIn className="w-5 h-5" />
@@ -193,7 +200,7 @@ export default function BookingContainer() {
             </button>
 
             <button
-              onClick={() => router.push("/register")}
+              onClick={() => router.push("/kayit-ol")}
               className="w-full bg-white text-black py-3 px-6 rounded-lg hover:bg-gray-50 transition-colors font-medium"
             >
               Hesap Oluştur
@@ -333,27 +340,57 @@ export default function BookingContainer() {
       };
     }
 
-    // Check working hours
-    const [startHour, startMinute] = bookingSettings.workingHoursStart
-      .split(":")
-      .map(Number);
-    const [endHour, endMinute] = bookingSettings.workingHoursEnd
-      .split(":")
-      .map(Number);
-    const [bookingHour, bookingMinute] = selectedTime.split(":").map(Number);
+    // Check location working hours if location is selected
+    if (formData.locationId && locations) {
+      const selectedLocation = locations.find(
+        (loc: any) => loc.id === formData.locationId
+      );
 
-    const bookingTimeInMinutes = bookingHour * 60 + bookingMinute;
-    const workingStartInMinutes = startHour * 60 + startMinute;
-    const workingEndInMinutes = endHour * 60 + endMinute;
+      if (selectedLocation && selectedLocation.workingHours) {
+        const { start, end } = selectedLocation.workingHours;
+        const [startHour, startMinute] = start.split(":").map(Number);
+        const [endHour, endMinute] = end.split(":").map(Number);
+        const [bookingHour, bookingMinute] = selectedTime
+          .split(":")
+          .map(Number);
 
-    if (
-      bookingTimeInMinutes < workingStartInMinutes ||
-      bookingTimeInMinutes > workingEndInMinutes
-    ) {
-      return {
-        isValid: false,
-        message: `Çalışma saatleri arasında (${bookingSettings.workingHoursStart} - ${bookingSettings.workingHoursEnd}) rezervasyon yapabilirsiniz.`,
-      };
+        const bookingTimeInMinutes = bookingHour * 60 + bookingMinute;
+        const workingStartInMinutes = startHour * 60 + startMinute;
+        const workingEndInMinutes = endHour * 60 + endMinute;
+
+        if (
+          bookingTimeInMinutes < workingStartInMinutes ||
+          bookingTimeInMinutes > workingEndInMinutes
+        ) {
+          return {
+            isValid: false,
+            message: `Seçilen lokasyon çalışma saatleri (${start} - ${end}) arasında rezervasyon yapabilirsiniz.`,
+          };
+        }
+      }
+    } else {
+      // Use default booking settings working hours if no location selected
+      const [startHour, startMinute] = bookingSettings.workingHoursStart
+        .split(":")
+        .map(Number);
+      const [endHour, endMinute] = bookingSettings.workingHoursEnd
+        .split(":")
+        .map(Number);
+      const [bookingHour, bookingMinute] = selectedTime.split(":").map(Number);
+
+      const bookingTimeInMinutes = bookingHour * 60 + bookingMinute;
+      const workingStartInMinutes = startHour * 60 + startMinute;
+      const workingEndInMinutes = endHour * 60 + endMinute;
+
+      if (
+        bookingTimeInMinutes < workingStartInMinutes ||
+        bookingTimeInMinutes > workingEndInMinutes
+      ) {
+        return {
+          isValid: false,
+          message: `Çalışma saatleri arasında (${bookingSettings.workingHoursStart} - ${bookingSettings.workingHoursEnd}) rezervasyon yapabilirsiniz.`,
+        };
+      }
     }
 
     return { isValid: true };
@@ -690,6 +727,8 @@ export default function BookingContainer() {
                     staffId={formData.staffId}
                     locations={locations || []}
                     bookingSettings={bookingSettings}
+                    packages={packages || []}
+                    selectedPackageId={formData.packageId}
                     onUpdate={updateFormData}
                   />
                 )}

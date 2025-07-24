@@ -41,11 +41,15 @@ const staffCreateSchema = z.object({
   experience: z.coerce.number().int().min(0).optional(),
   isActive: z.boolean().default(true),
   specialties: z.array(z.string()).default([]),
-  primaryLocationId: z.string().nullable().optional().transform((val) => {
-    // Boş string veya undefined ise null döndür
-    if (!val || val === "" || val === "none" || val === "select") return null;
-    return val;
-  }),
+  primaryLocationId: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((val) => {
+      // Boş string veya undefined ise null döndür
+      if (!val || val === "" || val === "none" || val === "select") return null;
+      return val;
+    }),
   // Birden fazla lokasyon için (gelecekte kullanılabilir)
   workingLocationIds: z.array(z.string()).optional().default([]),
 });
@@ -159,11 +163,16 @@ const StaffContainer = () => {
         ...data,
         avatar: avatarUrl,
         specialties: selectedSpecialties,
+        locationId: data.primaryLocationId || undefined, // null'ı undefined'a çevir
       };
 
-      console.log("DEBUG: Staff payload to submit:", formattedData);
+      // primaryLocationId alanını kaldır
+      const { primaryLocationId, workingLocationIds, ...apiData } =
+        formattedData;
 
-      await createMutation.mutateAsync(formattedData);
+      console.log("DEBUG: Staff payload to submit:", apiData);
+
+      await createMutation.mutateAsync(apiData);
 
       console.log("DEBUG: Staff created successfully");
       addToast({
@@ -187,6 +196,7 @@ const StaffContainer = () => {
   const handleUpdate = async (data: StaffUpdateData) => {
     console.log("DEBUG: Staff update triggered with data:", data);
     console.log("DEBUG: Uploaded avatar:", uploadedAvatar);
+    console.log("DEBUG: Selected staff avatar:", selectedStaff?.avatar);
 
     try {
       if (!selectedStaff?.id) {
@@ -201,17 +211,22 @@ const StaffContainer = () => {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
 
       let avatarUrl: string | undefined;
-      if (uploadedAvatar) {
+
+      // Yeni avatar yüklendiyse onu kullan
+      if (uploadedAvatar && uploadedAvatar.url) {
         avatarUrl = uploadedAvatar.url.startsWith("http")
           ? uploadedAvatar.url
           : `${baseUrl}${uploadedAvatar.url}`;
-      } else {
-        // Eğer yeni avatar yüklenmediyse mevcut avatar'ı kullan
-        avatarUrl = selectedStaff?.avatar;
+
+        console.log("DEBUG: Using new uploaded avatar:", avatarUrl);
+      } else if (selectedStaff?.avatar) {
+        // Yeni avatar yüklenmemişse mevcut avatar'ı kullan
+        avatarUrl = selectedStaff.avatar;
+        console.log("DEBUG: Using existing avatar:", avatarUrl);
       }
 
-      // URL formatını kontrol et
-      if (avatarUrl) {
+      // URL formatını kontrol et (sadece yeni yüklenen için)
+      if (uploadedAvatar && avatarUrl) {
         try {
           new URL(avatarUrl);
         } catch (urlError) {
@@ -228,12 +243,17 @@ const StaffContainer = () => {
         ...data,
         id: selectedStaff.id,
         avatar: avatarUrl,
-        specialties: data.specialties || [],
+        specialties: selectedSpecialties, // Use selectedSpecialties state instead of data.specialties
+        locationId: data.primaryLocationId || undefined, // null'ı undefined'a çevir
       };
 
-      console.log("DEBUG: Staff update payload:", formattedData);
+      // Gereksiz alanları kaldır
+      const { primaryLocationId, workingLocationIds, ...apiData } =
+        formattedData;
 
-      await updateMutation.mutateAsync(formattedData);
+      console.log("DEBUG: Staff update payload:", apiData);
+
+      await updateMutation.mutateAsync(apiData);
 
       console.log("DEBUG: Staff updated successfully");
       addToast({
@@ -241,8 +261,10 @@ const StaffContainer = () => {
         type: "success",
       });
       setIsEditModalOpen(false);
-      refetch();
+      setSelectedStaff(null);
+      setSelectedSpecialties([]);
       setUploadedAvatar(null);
+      refetch();
     } catch (error: any) {
       console.error("DEBUG: Staff update failed:", error);
       addToast({
@@ -291,18 +313,36 @@ const StaffContainer = () => {
 
   // Handle edit
   const handleEdit = (staff: any) => {
+    console.log("DEBUG: Edit staff triggered:", staff);
+    console.log("DEBUG: Staff avatar:", staff.avatar);
+
     setSelectedStaff(staff);
 
-    if (staff.avatar) {
-      setUploadedAvatar({
-        id: "avatar",
-        name: "avatar",
-        url: staff.avatar,
-        size: 0,
-        type: "image/jpeg",
-        uploadedAt: new Date(),
-        status: "success" as const,
-      });
+    // Set specialties from staff data
+    setSelectedSpecialties(staff.specialties || []);
+
+    // Avatar state'ini set et
+    if (staff.avatar && staff.avatar.trim() !== "") {
+      // Avatar URL'ini validate et
+      try {
+        new URL(staff.avatar);
+        setUploadedAvatar({
+          id: "existing-avatar",
+          name: "existing-avatar",
+          url: staff.avatar,
+          size: 0,
+          type: "image/jpeg",
+          uploadedAt: new Date(),
+          status: "success" as const,
+        });
+        console.log("DEBUG: Set existing avatar to state:", staff.avatar);
+      } catch (urlError) {
+        console.warn("Invalid existing avatar URL, skipping:", staff.avatar);
+        setUploadedAvatar(null);
+      }
+    } else {
+      setUploadedAvatar(null);
+      console.log("DEBUG: No existing avatar found");
     }
 
     setIsEditModalOpen(true);
@@ -374,7 +414,7 @@ const StaffContainer = () => {
         <div className="flex items-center space-x-1">
           <MapPin className="w-4 h-4 text-orange-500" />
           <span className="text-sm text-gray-700">
-            {record.location?.name || "Atanmamış"}
+            {record.primaryLocation?.name || "Atanmamış"}
           </span>
         </div>
       ),
@@ -389,6 +429,34 @@ const StaffContainer = () => {
           <span className="text-sm text-gray-700">
             {record.experience ? `${record.experience} yıl` : "Belirtilmemiş"}
           </span>
+        </div>
+      ),
+    },
+    {
+      key: "specialties",
+      title: "Uzmanlık Alanları",
+      width: "200px",
+      render: (value: any, record: any) => (
+        <div className="flex flex-wrap gap-1">
+          {record.specialties && record.specialties.length > 0 ? (
+            record.specialties
+              .slice(0, 3)
+              .map((specialty: string, index: number) => (
+                <span
+                  key={index}
+                  className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                >
+                  {specialty}
+                </span>
+              ))
+          ) : (
+            <span className="text-sm text-gray-500">Belirtilmemiş</span>
+          )}
+          {record.specialties && record.specialties.length > 3 && (
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+              +{record.specialties.length - 3}
+            </span>
+          )}
         </div>
       ),
     },
@@ -623,6 +691,7 @@ const StaffContainer = () => {
                 <Upload
                   multiple={false}
                   maxFiles={1}
+                  preset="avatar"
                   onUpload={(files: UploadedFile[]) =>
                     setUploadedAvatar(files[0] || null)
                   }
@@ -707,6 +776,8 @@ const StaffContainer = () => {
           onClose={() => {
             setIsEditModalOpen(false);
             setUploadedAvatar(null);
+            setSelectedSpecialties([]);
+            setSelectedStaff(null);
           }}
           title="Personel Düzenle"
           description="Personel bilgilerini güncelleyin"
@@ -796,12 +867,58 @@ const StaffContainer = () => {
                   <Upload
                     multiple={false}
                     maxFiles={1}
+                    preset="avatar"
                     onUpload={(files: UploadedFile[]) =>
                       setUploadedAvatar(files[0] || null)
                     }
                     onRemove={() => setUploadedAvatar(null)}
                     initialFiles={uploadedAvatar ? [uploadedAvatar] : []}
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Uzmanlık Alanları
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {specialtyOptions.map((specialty) => (
+                      <label
+                        key={specialty}
+                        className="flex items-center space-x-2"
+                      >
+                        <input
+                          type="checkbox"
+                          value={specialty}
+                          checked={selectedSpecialties.includes(specialty)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedSpecialties([
+                                ...selectedSpecialties,
+                                specialty,
+                              ]);
+                            } else {
+                              setSelectedSpecialties(
+                                selectedSpecialties.filter(
+                                  (s) => s !== specialty
+                                )
+                              );
+                            }
+                          }}
+                          className="rounded border-gray-300 text-orange-500 focus:ring-orange-400"
+                        />
+                        <span className="text-sm text-gray-700">
+                          {specialty}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  {selectedSpecialties.length > 0 && (
+                    <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
+                      <p className="text-sm text-blue-700">
+                        ✓ {selectedSpecialties.length} uzmanlık alanı seçildi
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -814,6 +931,8 @@ const StaffContainer = () => {
                   onClick={() => {
                     setIsEditModalOpen(false);
                     setUploadedAvatar(null);
+                    setSelectedSpecialties([]);
+                    setSelectedStaff(null);
                   }}
                   className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
                 >

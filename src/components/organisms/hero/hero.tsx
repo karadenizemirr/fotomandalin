@@ -2,19 +2,100 @@
 
 import { motion, useInView, AnimatePresence } from "framer-motion";
 import {
-  ArrowRight, Camera, Star, Award,
-  CheckCircle, Clock as ClockIcon, ChevronLeft, ChevronRight, Play, Pause
+  ArrowRight,
+  Camera,
+  Star,
+  Award,
+  CheckCircle,
+  Clock as ClockIcon,
+  ChevronLeft,
+  ChevronRight,
+  Play,
+  Pause,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRef, useState, useEffect } from "react";
 import { trpc } from "@/components/providers/trpcProvider";
 
-export default function HeroComponent({portfolioItems, portfolioIsLoading}: any) {
+export default function HeroComponent({
+  portfolioItems,
+  portfolioIsLoading,
+  categoriesData,
+  categoriesLoading,
+  categoriesError,
+}: any) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-50px" });
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isSliderPlaying, setIsSliderPlaying] = useState(true);
+
+  // Kategorilerden slider verileri oluştur
+  const createSliderFromCategories = () => {
+    if (!categoriesData?.items || categoriesLoading || categoriesError)
+      return [];
+
+    return categoriesData.items
+      .slice(0, 4)
+      .map((category: any, index: number) => {
+        // Kategori adına göre uygun fallback görsel seç
+        const getCategoryFallbackImage = (categoryName: string) => {
+          const name = categoryName.toLowerCase();
+          if (name.includes("düğün") || name.includes("nişan")) {
+            return (
+              fallbackImages.find((img) => img.id === "fallback-1") ||
+              fallbackImages[0]
+            );
+          } else if (name.includes("aile") || name.includes("family")) {
+            return (
+              fallbackImages.find((img) => img.id === "fallback-2") ||
+              fallbackImages[1]
+            );
+          } else if (name.includes("bebek") || name.includes("newborn")) {
+            return (
+              fallbackImages.find((img) => img.id === "fallback-3") ||
+              fallbackImages[2]
+            );
+          }
+          return fallbackImages[index % fallbackImages.length];
+        };
+
+        const fallbackImage = getCategoryFallbackImage(category.name);
+
+        // Kategori görsel alanlarını kontrol et - farklı alan adları olabilir
+        const categoryImage =
+          category.coverImage ||
+          category.image ||
+          category.thumbnail ||
+          category.photo ||
+          category.imageUrl ||
+          fallbackImage.coverImage;
+
+        // Debug için kategori verilerini konsola yazdır
+        console.log("Category slider data:", {
+          name: category.name,
+          hasOwnImage: !!category.coverImage,
+          finalImage: categoryImage,
+          packageCount: category._count?.packages,
+        });
+
+        return {
+          id: category.id,
+          title: category.name,
+          coverImage: categoryImage,
+          description:
+            category.description ||
+            `Profesyonel ${category.name.toLowerCase()} fotoğrafçılığı hizmeti`,
+          tags: [category.name],
+          location: "İstanbul",
+          slug: category.slug || `kategori-${category.id}`,
+          src: categoryImage,
+          alt: `Fotomandalin ${category.name} - İstanbul profesyonel fotoğrafçılık`,
+          category: category.name,
+          packageCount: category._count?.packages || 0,
+        };
+      });
+  };
 
   // Yedek statik veriler (API'den veri gelmediğinde kullanılacak)
   const fallbackImages = [
@@ -22,29 +103,32 @@ export default function HeroComponent({portfolioItems, portfolioIsLoading}: any)
       id: "fallback-1",
       title: "Düğün Fotoğrafçılığı",
       coverImage: "/uploads/00d7c90b-7144-4dd8-adf6-e13315e22655_thumb.jpg",
-      description: "Hayatınızın en özel gününü sanat eseri kalitesinde fotoğraflarla ölümsüzleştiriyoruz.",
+      description:
+        "Hayatınızın en özel gününü sanat eseri kalitesinde fotoğraflarla ölümsüzleştiriyoruz.",
       tags: ["Düğün", "Wedding", "Evlilik"],
       location: "İstanbul",
-      slug: "dugun-fotografciligi"
+      slug: "dugun-fotografciligi",
     },
     {
       id: "fallback-2",
       title: "Aile Portreleri",
       coverImage: "/uploads/23d1c560-897d-4a5e-ad69-fece2131c829_thumb.jpg",
-      description: "Ailenizin sıcaklığını ve birlikteliğini yansıtan duygusal aile portreleri.",
+      description:
+        "Ailenizin sıcaklığını ve birlikteliğini yansıtan duygusal aile portreleri.",
       tags: ["Aile", "Family", "Portre"],
       location: "İstanbul",
-      slug: "aile-portreleri"
+      slug: "aile-portreleri",
     },
     {
       id: "fallback-3",
       title: "Bebek & Newborn",
       coverImage: "/uploads/475f2e0e-e0a2-4f24-9960-d77fc8a75bc1_thumb.jpg",
-      description: "Minik mucizelerinizin ilk günlerini hassasiyetle kayıt altına alıyoruz.",
+      description:
+        "Minik mucizelerinizin ilk günlerini hassasiyetle kayıt altına alıyoruz.",
       tags: ["Bebek", "Newborn", "Baby"],
       location: "İstanbul",
-      slug: "bebek-newborn"
-    }
+      slug: "bebek-newborn",
+    },
   ];
 
   // Portfolio verilerini normalize et
@@ -60,7 +144,7 @@ export default function HeroComponent({portfolioItems, portfolioIsLoading}: any)
       // Slider için gerekli alanları ekle
       src: item.coverImage, // coverImage'i src olarak kullan
       alt: `Fotomandalin ${item.title} - İstanbul profesyonel fotoğrafçılık`,
-      category: item.tags?.[0] || "Fotoğrafçılık" // İlk tag'i kategori olarak kullan
+      category: item.tags?.[0] || "Fotoğrafçılık", // İlk tag'i kategori olarak kullan
     }));
   };
 
@@ -69,13 +153,22 @@ export default function HeroComponent({portfolioItems, portfolioIsLoading}: any)
     ...item,
     src: item.coverImage,
     alt: `Fotomandalin ${item.title} - İstanbul profesyonel fotoğrafçılık`,
-    category: item.tags?.[0] || "Fotoğrafçılık"
+    category: item.tags?.[0] || "Fotoğrafçılık",
   }));
 
-  // Kullanılacak görsel verisi - gerçek veri varsa onu kullan, yoksa fallback
-  const displayImages = !portfolioIsLoading && portfolioItems && portfolioItems.length > 0
-    ? normalizePortfolioData(portfolioItems)
-    : normalizedFallbackImages;
+  // Kullanılacak görsel verisi - öncelik sırası: kategoriler > portfolio > fallback
+  const categorySliderData = createSliderFromCategories();
+  const portfolioSliderData =
+    !portfolioIsLoading && portfolioItems && portfolioItems.length > 0
+      ? normalizePortfolioData(portfolioItems)
+      : [];
+
+  const displayImages =
+    categorySliderData.length > 0
+      ? categorySliderData
+      : portfolioSliderData.length > 0
+      ? portfolioSliderData
+      : normalizedFallbackImages;
 
   // Slider kontrol fonksiyonları
   const nextSlide = () => {
@@ -119,7 +212,7 @@ export default function HeroComponent({portfolioItems, portfolioIsLoading}: any)
     visible: {
       opacity: 1,
       y: 0,
-    }
+    },
   };
 
   const imageVariants = {
@@ -127,7 +220,7 @@ export default function HeroComponent({portfolioItems, portfolioIsLoading}: any)
     visible: {
       opacity: 1,
       scale: 1,
-    }
+    },
   };
 
   return (
@@ -139,52 +232,53 @@ export default function HeroComponent({portfolioItems, portfolioIsLoading}: any)
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "LocalBusiness",
-            "name": "Fotomandalin",
-            "description": "İstanbul'un profesyonel fotoğrafçılık hizmeti. Dü��ün, nişan, bebek, aile ve kurumsal çekimlerde 10+ yıllık deneyim.",
-            "url": "https://fotomandalin.com",
-            "telephone": "+90-XXX-XXX-XXXX",
-            "address": {
+            name: "Fotomandalin",
+            description:
+              "İstanbul'un profesyonel fotoğrafçılık hizmeti. Dü��ün, nişan, bebek, aile ve kurumsal çekimlerde 10+ yıllık deneyim.",
+            url: "https://fotomandalin.com",
+            telephone: "+90-XXX-XXX-XXXX",
+            address: {
               "@type": "PostalAddress",
-              "addressLocality": "İstanbul",
-              "addressCountry": "TR"
+              addressLocality: "İstanbul",
+              addressCountry: "TR",
             },
-            "geo": {
+            geo: {
               "@type": "GeoCoordinates",
-              "latitude": "41.0082",
-              "longitude": "28.9784"
+              latitude: "41.0082",
+              longitude: "28.9784",
             },
-            "openingHours": "Mo-Su 09:00-20:00",
-            "priceRange": "$$",
-            "aggregateRating": {
+            openingHours: "Mo-Su 09:00-20:00",
+            priceRange: "$$",
+            aggregateRating: {
               "@type": "AggregateRating",
-              "ratingValue": "4.9",
-              "reviewCount": "200",
-              "bestRating": "5",
-              "worstRating": "1"
+              ratingValue: "4.9",
+              reviewCount: "200",
+              bestRating: "5",
+              worstRating: "1",
             },
-            "service": [
+            service: [
               {
                 "@type": "Service",
-                "name": "Düğün Fotoğrafçılığı",
-                "description": "Profesyonel düğün fotoğraf çekimi hizmeti"
+                name: "Düğün Fotoğrafçılığı",
+                description: "Profesyonel düğün fotoğraf çekimi hizmeti",
               },
               {
                 "@type": "Service",
-                "name": "Aile Fotoğrafçılığı",
-                "description": "Aile çekimi ve portre fotoğrafçılık hizmeti"
+                name: "Aile Fotoğrafçılığı",
+                description: "Aile çekimi ve portre fotoğrafçılık hizmeti",
               },
               {
                 "@type": "Service",
-                "name": "Bebek Fotoğrafçılığı",
-                "description": "Newborn ve bebek fotoğraf çekimi hizmeti"
+                name: "Bebek Fotoğrafçılığı",
+                description: "Newborn ve bebek fotoğraf çekimi hizmeti",
               },
               {
                 "@type": "Service",
-                "name": "Kurumsal Fotoğrafçılık",
-                "description": "Kurumsal ve iş fotoğrafçılık hizmeti"
-              }
-            ]
-          })
+                name: "Kurumsal Fotoğrafçılık",
+                description: "Kurumsal ve iş fotoğrafçılık hizmeti",
+              },
+            ],
+          }),
         }}
       />
 
@@ -233,20 +327,22 @@ export default function HeroComponent({portfolioItems, portfolioIsLoading}: any)
             {/* Hero Content */}
             <div className="lg:col-span-7 flex flex-col gap-8">
               {/* Brand Badge */}
-              <motion.div
-                variants={itemVariants}
-                className="inline-block"
-              >
+              <motion.div variants={itemVariants} className="inline-block">
                 <div className="inline-flex items-center gap-4 rounded-full border border-gray-200 bg-white px-6 py-4">
                   <div className="relative">
                     <Camera className="w-6 h-6 text-black" />
                     <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#fca311] rounded-full"></div>
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-black font-bold text-sm tracking-wide" itemProp="name">
+                    <span
+                      className="text-black font-bold text-sm tracking-wide"
+                      itemProp="name"
+                    >
                       FOTOMANDALIN
                     </span>
-                    <span className="text-xs text-gray-500">Profesyonel Fotoğrafçılık</span>
+                    <span className="text-xs text-gray-500">
+                      Profesyonel Fotoğrafçılık
+                    </span>
                   </div>
                   <div className="flex items-center gap-1 text-xs text-gray-600">
                     <CheckCircle className="w-3 h-3 text-green-600" />
@@ -256,10 +352,7 @@ export default function HeroComponent({portfolioItems, portfolioIsLoading}: any)
               </motion.div>
 
               {/* Main Heading */}
-              <motion.div
-                variants={itemVariants}
-                className="space-y-6"
-              >
+              <motion.div variants={itemVariants} className="space-y-6">
                 <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-black leading-[0.95]">
                   <span className="block">Anılarınızı</span>
                   <span className="block text-[#fca311] relative">
@@ -268,7 +361,11 @@ export default function HeroComponent({portfolioItems, portfolioIsLoading}: any)
                       className="absolute -bottom-2 left-0 w-full h-1 bg-[#fca311] opacity-30"
                       initial={{ scaleX: 0 }}
                       animate={isInView ? { scaleX: 1 } : { scaleX: 0 }}
-                      transition={{ delay: 1.2, duration: 0.8, ease: "easeOut" }}
+                      transition={{
+                        delay: 1.2,
+                        duration: 0.8,
+                        ease: "easeOut",
+                      }}
                       style={{ transformOrigin: "left" }}
                     />
                   </span>
@@ -276,24 +373,38 @@ export default function HeroComponent({portfolioItems, portfolioIsLoading}: any)
               </motion.div>
 
               {/* Description */}
-              <motion.div
-                variants={itemVariants}
-                className="space-y-4"
-              >
-                <p className="text-lg text-gray-600 max-w-[580px] leading-relaxed" itemProp="description">
-                  <strong className="text-black font-semibold">İstanbul'un önde gelen fotoğrafçılık hizmeti</strong> ile özel anlarınızı
-                  sanat eserine dönüştürün.
-                  <span className="text-black font-medium"> Düğün, nişan, bebek, aile ve kurumsal çekimlerde</span>
-                  {" "}10+ yıllık deneyimimizle yanınızdayız.
+              <motion.div variants={itemVariants} className="space-y-4">
+                <p
+                  className="text-lg text-gray-600 max-w-[580px] leading-relaxed"
+                  itemProp="description"
+                >
+                  <strong className="text-black font-semibold">
+                    İstanbul'un önde gelen fotoğrafçılık hizmeti
+                  </strong>{" "}
+                  ile özel anlarınızı sanat eserine dönüştürün.
+                  <span className="text-black font-medium">
+                    {" "}
+                    Düğün, nişan, bebek, aile ve kurumsal çekimlerde
+                  </span>{" "}
+                  10+ yıllık deneyimimizle yanınızdayız.
                 </p>
 
                 {/* Service Tags */}
                 <div className="flex flex-wrap gap-2 text-sm">
-                  {["Düğün Fotoğrafçısı", "Aile Çekimi", "Bebek Fotoğrafçısı", "Kurumsal Çekim"].map((tag, index) => (
+                  {[
+                    "Düğün Fotoğrafçısı",
+                    "Aile Çekimi",
+                    "Bebek Fotoğrafçısı",
+                    "Kurumsal Çekim",
+                  ].map((tag, index) => (
                     <motion.span
                       key={tag}
                       initial={{ opacity: 0, scale: 0.8 }}
-                      animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
+                      animate={
+                        isInView
+                          ? { opacity: 1, scale: 1 }
+                          : { opacity: 0, scale: 0.8 }
+                      }
                       transition={{ delay: 0.8 + index * 0.1, duration: 0.5 }}
                       className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-default"
                     >
@@ -309,30 +420,57 @@ export default function HeroComponent({portfolioItems, portfolioIsLoading}: any)
                 className="grid grid-cols-2 md:grid-cols-4 gap-6 py-8"
               >
                 {[
-                  { icon: Star, value: "4.9/5", label: "Müşteri Puanı", count: "200+ Değerlendirme", color: "text-[#fca311]" },
-                  { icon: Award, value: "10+", label: "Yıl Deneyim", count: "Sektörde", color: "text-black" },
-                  { icon: Camera, value: "1500+", label: "Başarılı Proje", count: "Mutlu Müşteri", color: "text-black" },
-                  { icon: ClockIcon, value: "24/7", label: "Online Rezervasyon", count: "Hızlı Yanıt", color: "text-black" }
+                  {
+                    icon: Star,
+                    value: "4.9/5",
+                    label: "Müşteri Puanı",
+                    count: "200+ Değerlendirme",
+                    color: "text-[#fca311]",
+                  },
+                  {
+                    icon: Award,
+                    value: "10+",
+                    label: "Yıl Deneyim",
+                    count: "Sektörde",
+                    color: "text-black",
+                  },
+                  {
+                    icon: Camera,
+                    value: "1500+",
+                    label: "Başarılı Proje",
+                    count: "Mutlu Müşteri",
+                    color: "text-black",
+                  },
+                  {
+                    icon: ClockIcon,
+                    value: "24/7",
+                    label: "Online Rezervasyon",
+                    count: "Hızlı Yanıt",
+                    color: "text-black",
+                  },
                 ].map((stat, index) => (
                   <motion.div
                     key={stat.label}
                     initial={{ opacity: 0, y: 20 }}
-                    animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+                    animate={
+                      isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }
+                    }
                     transition={{ delay: 1.2 + index * 0.1, duration: 0.6 }}
                     className="flex flex-col items-center text-center"
                   >
-                    <div className={`flex items-center justify-center w-12 h-12 rounded-full ${stat.color} bg-opacity-10 mb-2`}>
+                    <div
+                      className={`flex items-center justify-center w-12 h-12 rounded-full ${stat.color} bg-opacity-10 mb-2`}
+                    >
                       <stat.icon className={`w-6 h-6 ${stat.color}`} />
                     </div>
-                    <div className="text-xl font-semibold text-black" itemProp="aggregateRating">
+                    <div
+                      className="text-xl font-semibold text-black"
+                      itemProp="aggregateRating"
+                    >
                       {stat.value}
                     </div>
-                    <div className="text-sm text-gray-500">
-                      {stat.label}
-                    </div>
-                    <div className="text-xs text-gray-400">
-                      {stat.count}
-                    </div>
+                    <div className="text-sm text-gray-500">{stat.label}</div>
+                    <div className="text-xs text-gray-400">{stat.count}</div>
                   </motion.div>
                 ))}
               </motion.div>
@@ -392,8 +530,14 @@ export default function HeroComponent({portfolioItems, portfolioIsLoading}: any)
                       className="absolute inset-0"
                     >
                       <Image
-                        src={displayImages[activeImageIndex]?.src || displayImages[0]?.src}
-                        alt={displayImages[activeImageIndex]?.alt || displayImages[0]?.alt}
+                        src={
+                          displayImages[activeImageIndex]?.src ||
+                          displayImages[0]?.src
+                        }
+                        alt={
+                          displayImages[activeImageIndex]?.alt ||
+                          displayImages[0]?.alt
+                        }
                         fill
                         className="object-cover"
                         sizes="(max-width: 768px) 100vw, 50vw"
@@ -414,14 +558,36 @@ export default function HeroComponent({portfolioItems, portfolioIsLoading}: any)
                           <motion.span
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
-                            transition={{ delay: 0.4, type: "spring", stiffness: 300 }}
+                            transition={{
+                              delay: 0.4,
+                              type: "spring",
+                              stiffness: 300,
+                            }}
                             className="px-4 py-2 bg-[#fca311] text-black text-xs font-bold rounded-full"
                           >
                             {displayImages[activeImageIndex]?.category}
                           </motion.span>
+                          {displayImages[activeImageIndex]?.packageCount !==
+                            undefined && (
+                            <motion.span
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              transition={{
+                                delay: 0.5,
+                                type: "spring",
+                                stiffness: 300,
+                              }}
+                              className="px-3 py-1 bg-white/20 text-white text-xs font-medium rounded-full border border-white/30"
+                            >
+                              {displayImages[activeImageIndex]?.packageCount}{" "}
+                              Paket
+                            </motion.span>
+                          )}
                           <div className="flex items-center gap-1 text-white/80 text-xs">
                             <div className="w-1.5 h-1.5 bg-[#fca311] rounded-full"></div>
-                            <span>{activeImageIndex + 1} / {displayImages.length}</span>
+                            <span>
+                              {activeImageIndex + 1} / {displayImages.length}
+                            </span>
                           </div>
                         </div>
                         <h3 className="text-xl font-bold text-white mb-2 leading-tight">
@@ -461,7 +627,11 @@ export default function HeroComponent({portfolioItems, portfolioIsLoading}: any)
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     className="absolute top-6 right-6 w-12 h-12 bg-black/60 rounded-full flex items-center justify-center transition-all duration-300 border border-white/10 z-10"
-                    aria-label={isSliderPlaying ? "Otomatik oynatmayı durdur" : "Otomatik oynatmayı başlat"}
+                    aria-label={
+                      isSliderPlaying
+                        ? "Otomatik oynatmayı durdur"
+                        : "Otomatik oynatmayı başlat"
+                    }
                   >
                     <motion.div
                       animate={{ rotate: isSliderPlaying ? 0 : 180 }}
@@ -479,20 +649,18 @@ export default function HeroComponent({portfolioItems, portfolioIsLoading}: any)
                 {/* Thumbnail Navigation */}
                 <div className="mt-8 relative">
                   <div className="flex items-center justify-center gap-3 overflow-x-auto py-3 px-2">
-                    {displayImages.map((image, index) => (
+                    {displayImages.map((image: any, index: number) => (
                       <motion.button
                         key={image.id}
                         onClick={() => setActiveImageIndex(index)}
                         whileHover={{ scale: 1.05, y: -2 }}
                         whileTap={{ scale: 0.95 }}
                         className={`relative flex-shrink-0 group ${
-                          index === activeImageIndex 
-                            ? 'w-20 h-20' 
-                            : 'w-16 h-16'
+                          index === activeImageIndex ? "w-20 h-20" : "w-16 h-16"
                         } rounded-2xl overflow-hidden transition-all duration-500 ${
-                          index === activeImageIndex 
-                            ? 'ring-4 ring-[#fca311] ring-offset-2 ring-offset-white' 
-                            : 'ring-2 ring-gray-200 hover:ring-gray-300'
+                          index === activeImageIndex
+                            ? "ring-4 ring-[#fca311] ring-offset-2 ring-offset-white"
+                            : "ring-2 ring-gray-200 hover:ring-gray-300"
                         }`}
                       >
                         <Image
@@ -500,9 +668,9 @@ export default function HeroComponent({portfolioItems, portfolioIsLoading}: any)
                           alt={image.alt}
                           fill
                           className={`object-cover transition-all duration-500 ${
-                            index === activeImageIndex 
-                              ? 'grayscale-0 brightness-100' 
-                              : 'grayscale-[0.3] brightness-90 group-hover:grayscale-0 group-hover:brightness-100'
+                            index === activeImageIndex
+                              ? "grayscale-0 brightness-100"
+                              : "grayscale-[0.3] brightness-90 group-hover:grayscale-0 group-hover:brightness-100"
                           }`}
                           sizes="80px"
                         />
@@ -521,7 +689,7 @@ export default function HeroComponent({portfolioItems, portfolioIsLoading}: any)
                 {/* Progress Indicator */}
                 <div className="flex items-center justify-center mt-6">
                   <div className="flex gap-2">
-                    {displayImages.map((_, index) => (
+                    {displayImages.map((_: any, index: number) => (
                       <motion.div
                         key={index}
                         className="relative"
@@ -529,9 +697,9 @@ export default function HeroComponent({portfolioItems, portfolioIsLoading}: any)
                       >
                         <div
                           className={`h-1.5 rounded-full transition-all duration-500 cursor-pointer ${
-                            index === activeImageIndex 
-                              ? 'w-12 bg-[#fca311]' 
-                              : 'w-3 bg-gray-300 hover:bg-gray-400'
+                            index === activeImageIndex
+                              ? "w-12 bg-[#fca311]"
+                              : "w-3 bg-gray-300 hover:bg-gray-400"
                           }`}
                           onClick={() => setActiveImageIndex(index)}
                         />
@@ -540,8 +708,12 @@ export default function HeroComponent({portfolioItems, portfolioIsLoading}: any)
                             className="absolute inset-0 bg-[#fca311] rounded-full"
                             initial={{ scaleX: 0 }}
                             animate={{ scaleX: 1 }}
-                            transition={{ duration: 5, ease: "linear", repeat: Infinity }}
-                            style={{ transformOrigin: 'left' }}
+                            transition={{
+                              duration: 5,
+                              ease: "linear",
+                              repeat: Infinity,
+                            }}
+                            style={{ transformOrigin: "left" }}
                           />
                         )}
                       </motion.div>

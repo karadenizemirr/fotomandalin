@@ -46,6 +46,31 @@ const generateSlug = (name: string): string => {
     .replace(/^-|-$/g, "");
 };
 
+// Working hours utilities
+const formatWorkingHours = (startTime?: string, endTime?: string) => {
+  if (!startTime || !endTime) return undefined;
+  return { start: startTime, end: endTime };
+};
+
+const parseWorkingHours = (workingHours: any) => {
+  if (!workingHours || typeof workingHours !== "object") {
+    return { start: "", end: "" };
+  }
+  return {
+    start: workingHours.start || "",
+    end: workingHours.end || "",
+  };
+};
+
+const displayWorkingHours = (workingHours: any) => {
+  if (!workingHours || typeof workingHours !== "object") {
+    return "Belirtilmemiş";
+  }
+  const { start, end } = workingHours;
+  if (!start || !end) return "Belirtilmemiş";
+  return `${start} - ${end}`;
+};
+
 // Validation schemas
 const locationCreateSchema = z.object({
   name: z.string().min(1, "Lokasyon adı gereklidir"),
@@ -66,6 +91,9 @@ const locationCreateSchema = z.object({
     .number()
     .min(0, "Sıralama 0'dan büyük olmalıdır")
     .default(0),
+  // Çalışma saatleri için ayrı alanlar
+  workingStartTime: z.string().optional(),
+  workingEndTime: z.string().optional(),
   isActive: z.boolean().default(true),
 });
 
@@ -74,7 +102,10 @@ const locationUpdateSchema = locationCreateSchema.extend({
 });
 
 type LocationFormData = z.infer<typeof locationCreateSchema>;
-type LocationUpdateData = z.infer<typeof locationUpdateSchema>;
+type LocationUpdateData = z.infer<typeof locationUpdateSchema> & {
+  workingStartTime?: string;
+  workingEndTime?: string;
+};
 
 const LocationContainer = () => {
   // State
@@ -168,7 +199,8 @@ const LocationContainer = () => {
         } catch (urlError) {
           console.error("Invalid cover image URL format:", urlError);
           addToast({
-            message: "Kapak görseli URL'i geçerli değil. Lütfen tekrar yükleyin.",
+            message:
+              "Kapak görseli URL'i geçerli değil. Lütfen tekrar yükleyin.",
             type: "error",
           });
           return;
@@ -188,16 +220,26 @@ const LocationContainer = () => {
         }
       }
 
+      // Çalışma saatlerini JSON formatına dönüştür
+      const workingHours = formatWorkingHours(
+        data.workingStartTime,
+        data.workingEndTime
+      );
+
       const formattedData = {
         ...data,
         slug: data.slug || generateSlug(data.name || ""),
         images: imageUrls,
         coverImage: coverImageUrl,
+        workingHours: workingHours,
       };
 
-      console.log("DEBUG: Location payload to submit:", formattedData);
+      // workingStartTime ve workingEndTime alanlarını kaldır (bunlar API'ye gönderilmemeli)
+      const { workingStartTime, workingEndTime, ...apiData } = formattedData;
 
-      await createMutation.mutateAsync(formattedData);
+      console.log("DEBUG: Location payload to submit:", apiData);
+
+      await createMutation.mutateAsync(apiData);
 
       console.log("DEBUG: Location created successfully");
       addToast({
@@ -252,7 +294,8 @@ const LocationContainer = () => {
         } catch (urlError) {
           console.error("Invalid cover image URL format:", urlError);
           addToast({
-            message: "Kapak görseli URL'i geçerli değil. Lütfen tekrar yükleyin.",
+            message:
+              "Kapak görseli URL'i geçerli değil. Lütfen tekrar yükleyin.",
             type: "error",
           });
           return;
@@ -272,17 +315,27 @@ const LocationContainer = () => {
         }
       }
 
+      // Çalışma saatlerini JSON formatına dönüştür
+      const workingHours = formatWorkingHours(
+        data.workingStartTime,
+        data.workingEndTime
+      );
+
       const formattedData = {
         ...data,
         id: selectedLocation.id,
         slug: data.slug || generateSlug(data.name || ""),
         images: imageUrls,
         coverImage: coverImageUrl,
+        workingHours: workingHours,
       };
 
-      console.log("DEBUG: Location update payload:", formattedData);
+      // workingStartTime ve workingEndTime alanlarını kaldır (bunlar API'ye gönderilmemeli)
+      const { workingStartTime, workingEndTime, ...apiData } = formattedData;
 
-      await updateMutation.mutateAsync(formattedData);
+      console.log("DEBUG: Location update payload:", apiData);
+
+      await updateMutation.mutateAsync(apiData);
 
       console.log("DEBUG: Location updated successfully");
       addToast({
@@ -448,11 +501,11 @@ const LocationContainer = () => {
       title: "Çalışma Saatleri",
       dataIndex: "workingHours",
       width: "150px",
-      render: (value: string) => (
+      render: (value: any) => (
         <div className="flex items-center space-x-1">
           <Clock className="w-4 h-4 text-orange-500" />
           <span className="text-sm text-gray-700">
-            {value || "Belirtilmemiş"}
+            {displayWorkingHours(value)}
           </span>
         </div>
       ),
@@ -655,12 +708,23 @@ const LocationContainer = () => {
                 required
               />
 
-              <TextField
-                name="workingHours"
-                label="Çalışma Saatleri"
-                placeholder="09:00 - 18:00"
-                helperText="Örn: 09:00 - 18:00 veya 24/7"
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <TextField
+                  name="workingStartTime"
+                  label="Başlangıç Saati"
+                  type="time"
+                  placeholder="09:00"
+                  helperText="Çalışmaya başlama saati"
+                />
+
+                <TextField
+                  name="workingEndTime"
+                  label="Bitiş Saati"
+                  type="time"
+                  placeholder="18:00"
+                  helperText="Çalışmayı bitirme saati"
+                />
+              </div>
 
               <NumberField
                 name="sortOrder"
@@ -764,12 +828,16 @@ const LocationContainer = () => {
               slug: selectedLocation.slug,
               description: selectedLocation.description || "",
               address: selectedLocation.address,
-              latitude: selectedLocation.coordinates?.latitude,
-              longitude: selectedLocation.coordinates?.longitude,
+              latitude: selectedLocation.latitude,
+              longitude: selectedLocation.longitude,
               extraFee: selectedLocation.extraFee,
               maxBookingsPerDay: selectedLocation.maxBookingsPerDay,
               sortOrder: selectedLocation.sortOrder,
               isActive: selectedLocation.isActive,
+              workingStartTime: parseWorkingHours(selectedLocation.workingHours)
+                .start,
+              workingEndTime: parseWorkingHours(selectedLocation.workingHours)
+                .end,
             }}
             onSubmit={handleUpdate}
           >
@@ -840,6 +908,24 @@ const LocationContainer = () => {
                   min={1}
                   required
                 />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <TextField
+                    name="workingStartTime"
+                    label="Başlangıç Saati"
+                    type="time"
+                    placeholder="09:00"
+                    helperText="Çalışmaya başlama saati"
+                  />
+
+                  <TextField
+                    name="workingEndTime"
+                    label="Bitiş Saati"
+                    type="time"
+                    placeholder="18:00"
+                    helperText="Çalışmayı bitirme saati"
+                  />
+                </div>
 
                 <NumberField
                   name="sortOrder"

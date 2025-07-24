@@ -110,11 +110,11 @@ const GalleryContainer = () => {
 
     if (searchTerm) {
       filtered = filtered.filter(
-        (item) =>
+        (item: any) =>
           item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
           item.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           item.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          item.tags.some((tag) =>
+          item.tags.some((tag: any) =>
             tag.toLowerCase().includes(searchTerm.toLowerCase())
           )
       );
@@ -521,12 +521,6 @@ const GalleryContainer = () => {
       onClick: handleToggleFeatured,
     },
     {
-      key: "duplicate",
-      label: "Kopyala",
-      icon: <Copy className="w-4 h-4" />,
-      onClick: handleDuplicate,
-    },
-    {
       key: "delete",
       label: "Sil",
       icon: <Trash2 className="w-4 h-4" />,
@@ -622,7 +616,8 @@ const GalleryContainer = () => {
                 </p>
                 <p className="text-2xl font-bold text-gray-900">
                   {filteredData.reduce(
-                    (total, item) => total + (item.images?.length || 0),
+                    (total: any, item: any) =>
+                      total + (item.images?.length || 0),
                     0
                   )}
                 </p>

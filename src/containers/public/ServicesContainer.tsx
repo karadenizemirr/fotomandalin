@@ -86,7 +86,7 @@ export default function ServicesContainer() {
 
   const filteredCategories =
     categoriesData?.items?.filter(
-      (category) =>
+      (category: any) =>
         category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         category.description?.toLowerCase().includes(searchTerm.toLowerCase())
     ) || [];

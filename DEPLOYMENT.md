@@ -30,12 +30,43 @@ Bu rehber, Fotomandalin projesi için GitHub Actions kullanarak EC2 üzerine oto
 
 ### 1. EC2 Instance Hazırlama
 
+**Yöntem 1: SSH Key ile Otomatik Setup (Önerilen)**
+
 ```bash
 # EC2'ya SSH bağlantısı
 ssh -i your-key.pem ubuntu@your-ec2-ip
 
-# Setup scriptini çalıştır
-curl -sSL https://raw.githubusercontent.com/karadenizemirr/fotomandalin/main/scripts/ec2-setup.sh | bash
+# GitHub SSH key setup (private repo için gerekli)
+ssh-keygen -t ed25519 -C "your-email@domain.com"
+cat ~/.ssh/id_ed25519.pub  # Bu key'i GitHub → Settings → SSH Keys'e ekleyin
+
+# SSH bağlantısını test et
+ssh -T git@github.com
+
+# Setup scriptini manuel çalıştır (repository'den kopyala)
+# ec2-setup.sh dosyasını EC2'ya kopyala ve çalıştır
+```
+
+**Yöntem 2: Manuel Setup**
+
+```bash
+# EC2'ya SSH bağlantısı
+ssh -i your-key.pem ubuntu@your-ec2-ip
+
+# Temel paketleri kur
+sudo apt update && sudo apt upgrade -y
+curl -fsSL https://get.docker.com -o get-docker.sh && sudo sh get-docker.sh
+sudo usermod -aG docker $USER
+sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+sudo apt install -y git nginx-full certbot python3-certbot-nginx
+
+# Proje dizini oluştur
+mkdir -p /home/$USER/fotomandalin
+cd /home/$USER/fotomandalin
+
+# Repository dosyalarını SCP ile kopyala (local'dan)
+# scp -i your-key.pem -r . ubuntu@your-ec2-ip:/home/ubuntu/fotomandalin/
 
 # Reboot (Docker için)
 sudo reboot

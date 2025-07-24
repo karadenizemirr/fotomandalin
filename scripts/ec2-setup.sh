@@ -39,7 +39,23 @@ cd /home/$USER/fotomandalin
 # Clone repository (ilk kurulum için)
 if [ ! -d ".git" ]; then
     echo "📂 Repository klonlanıyor..."
-    git clone https://github.com/karadenizemirr/fotomandalin.git .
+    echo "ℹ️  Private repository için SSH key gerekli!"
+    echo "   GitHub'da SSH key setup: https://docs.github.com/en/authentication/connecting-to-github-with-ssh"
+    
+    # SSH key varsa SSH ile clone
+    if [ -f ~/.ssh/id_rsa ] || [ -f ~/.ssh/id_ed25519 ]; then
+        echo "🔑 SSH key bulundu, SSH ile clone yapılıyor..."
+        git clone git@github.com:karadenizemirr/fotomandalin.git .
+    else
+        echo "❌ SSH key bulunamadı!"
+        echo "   Lütfen önce SSH key setup yapın:"
+        echo "   1. ssh-keygen -t ed25519 -C 'your-email@domain.com'"
+        echo "   2. cat ~/.ssh/id_ed25519.pub  # Bu key'i GitHub'a ekleyin"
+        echo "   3. ssh -T git@github.com  # Bağlantıyı test edin"
+        echo ""
+        echo "   Alternatif olarak repository dosyalarını manuel olarak upload edebilirsiniz."
+        exit 1
+    fi
 fi
 
 # Create necessary directories

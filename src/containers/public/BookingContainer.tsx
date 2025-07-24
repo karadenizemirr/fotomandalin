@@ -342,12 +342,12 @@ export default function BookingContainer() {
 
     // Check location working hours if location is selected
     if (formData.locationId && locations) {
-      const selectedLocation = locations.find(
+      const selectedLocation: any = locations.find(
         (loc: any) => loc.id === formData.locationId
       );
 
       if (selectedLocation && selectedLocation.workingHours) {
-        const { start, end } = selectedLocation.workingHours;
+        const { start, end }: any = selectedLocation.workingHours;
         const [startHour, startMinute] = start.split(":").map(Number);
         const [endHour, endMinute] = end.split(":").map(Number);
         const [bookingHour, bookingMinute] = selectedTime

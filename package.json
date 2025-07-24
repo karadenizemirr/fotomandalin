@@ -5,8 +5,18 @@
   "scripts": {
     "dev": "prisma generate && prisma db push && next dev --turbopack",
     "build": "prisma generate && next build",
+    "build:production": "NODE_ENV=production prisma generate && next build",
     "start": "next start",
-    "lint": "next lint"
+    "start:production": "NODE_ENV=production next start",
+    "lint": "next lint",
+    "lint:fix": "next lint --fix",
+    "type-check": "tsc --noEmit",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate deploy",
+    "db:studio": "prisma studio",
+    "clean": "rm -rf .next node_modules/.cache",
+    "analyze": "cross-env ANALYZE=true npm run build"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.848.0",

@@ -490,7 +490,7 @@ export default function HeroComponent({
                     className="group inline-flex h-14 items-center justify-center rounded-xl bg-black px-8 text-base font-semibold text-white transition-all duration-200 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
                     aria-label="Fotomandalin ile hemen rezervasyon yapın - İstanbul fotoğrafçı"
                   >
-                    <span>Ücretsiz Keşif Randevusu</span>
+                    <span>Rezervasyon Oluştur</span>
                     <ArrowRight className="ml-3 h-5 w-5 transition-transform group-hover:translate-x-1" />
                   </Link>
                 </motion.div>

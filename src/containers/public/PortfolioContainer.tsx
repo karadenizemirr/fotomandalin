@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
-import Link from "next/link";
 import Image from "next/image";
 import { trpc } from "@/components/providers/trpcProvider";
 import { useToast } from "@/components/ui/toast";
@@ -16,10 +15,14 @@ import {
   Star,
   Heart,
   ArrowRight,
-  Sparkles,
   RefreshCw,
   Tag,
   Zap,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Share2,
 } from "lucide-react";
 import CTA from "@/components/atoms/cta";
 
@@ -33,10 +36,10 @@ interface PortfolioItem {
   tags: string[];
   isPublished: boolean;
   isFeatured: boolean;
-  eventDate: Date | null;
+  eventDate: Date | string | null;
   location: string | null;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
 export default function PortfolioContainer() {
@@ -48,6 +51,10 @@ export default function PortfolioContainer() {
     "created"
   );
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [currentPortfolioItem, setCurrentPortfolioItem] =
+    useState<PortfolioItem | null>(null);
 
   // Fetch portfolio items
   const {
@@ -94,6 +101,73 @@ export default function PortfolioContainer() {
       fetchNextPage();
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // Lightbox functions
+  const openLightbox = useCallback(
+    (item: PortfolioItem, imageIndex: number = 0) => {
+      setCurrentPortfolioItem(item);
+      setCurrentImageIndex(imageIndex);
+      setLightboxOpen(true);
+      document.body.style.overflow = "hidden";
+    },
+    []
+  );
+
+  const closeLightbox = useCallback(() => {
+    setLightboxOpen(false);
+    setCurrentPortfolioItem(null);
+    setCurrentImageIndex(0);
+    document.body.style.overflow = "unset";
+  }, []);
+
+  const nextImage = useCallback(() => {
+    if (currentPortfolioItem) {
+      const totalImages = currentPortfolioItem.images.length + 1; // +1 for cover image
+      setCurrentImageIndex((prev) => (prev + 1) % totalImages);
+    }
+  }, [currentPortfolioItem]);
+
+  const prevImage = useCallback(() => {
+    if (currentPortfolioItem) {
+      const totalImages = currentPortfolioItem.images.length + 1; // +1 for cover image
+      setCurrentImageIndex((prev) => (prev - 1 + totalImages) % totalImages);
+    }
+  }, [currentPortfolioItem]);
+
+  // Get current image URL
+  const getCurrentImageUrl = useCallback(() => {
+    if (!currentPortfolioItem) return "";
+    if (currentImageIndex === 0) return currentPortfolioItem.coverImage;
+    return currentPortfolioItem.images[currentImageIndex - 1];
+  }, [currentPortfolioItem, currentImageIndex]);
+
+  // Keyboard navigation
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (!lightboxOpen) return;
+
+      switch (e.key) {
+        case "Escape":
+          closeLightbox();
+          break;
+        case "ArrowLeft":
+          prevImage();
+          break;
+        case "ArrowRight":
+          nextImage();
+          break;
+      }
+    },
+    [lightboxOpen, closeLightbox, prevImage, nextImage]
+  );
+
+  // Add keyboard listener
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      document.addEventListener("keydown", handleKeyDown);
+      return () => document.removeEventListener("keydown", handleKeyDown);
+    }
+  }, [handleKeyDown]);
 
   const formatDate = (date: Date | string | null) => {
     if (!date) return null;
@@ -372,7 +446,10 @@ export default function PortfolioContainer() {
                   className="group bg-white rounded-2xl border border-gray-100 hover:border-gray-200 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden"
                 >
                   {/* Image */}
-                  <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
+                  <div
+                    className="relative aspect-[4/3] overflow-hidden bg-gray-100 cursor-pointer"
+                    onClick={() => openLightbox(item, 0)}
+                  >
                     <Image
                       src={item.coverImage}
                       alt={item.title}
@@ -383,6 +460,13 @@ export default function PortfolioContainer() {
                     {/* Overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
+                    {/* Hover Action */}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <div className="bg-black/80 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-medium">
+                        Görüntüle
+                      </div>
+                    </div>
+
                     {/* Featured Badge */}
                     {item.isFeatured && (
                       <div className="absolute top-4 left-4 bg-black/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-sm font-medium">
@@ -392,14 +476,6 @@ export default function PortfolioContainer() {
                         </div>
                       </div>
                     )}
-
-                    {/* Image Count */}
-                    <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm text-gray-800 px-3 py-1.5 rounded-full text-sm font-medium">
-                      <div className="flex items-center gap-1">
-                        <Camera className="w-3 h-3" />
-                        {item.images.length + 1}
-                      </div>
-                    </div>
                   </div>
 
                   {/* Content */}
@@ -499,6 +575,185 @@ export default function PortfolioContainer() {
           ]}
         />
       </div>
+
+      {/* Lightbox Modal */}
+      {lightboxOpen && currentPortfolioItem && (
+        <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-sm">
+          {/* Close Button */}
+          <button
+            onClick={closeLightbox}
+            className="absolute top-6 right-6 z-10 w-12 h-12 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-all duration-200"
+          >
+            <X className="w-6 h-6" />
+          </button>
+
+          {/* Navigation Buttons */}
+          {currentPortfolioItem.images.length > 0 && (
+            <>
+              <button
+                onClick={prevImage}
+                className="absolute left-6 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-all duration-200"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+
+              <button
+                onClick={nextImage}
+                className="absolute right-6 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-all duration-200"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            </>
+          )}
+
+          {/* Image Container */}
+          <div className="flex items-center justify-center min-h-screen p-6">
+            <div className="relative max-w-7xl max-h-full">
+              <motion.div
+                key={currentImageIndex}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3 }}
+                className="relative"
+              >
+                <Image
+                  src={getCurrentImageUrl()}
+                  alt={currentPortfolioItem.title}
+                  width={1200}
+                  height={800}
+                  className="max-w-full max-h-[85vh] object-contain rounded-lg"
+                  priority
+                />
+              </motion.div>
+            </div>
+          </div>
+
+          {/* Bottom Info Panel */}
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent">
+            <div className="max-w-7xl mx-auto p-6">
+              <div className="flex items-center justify-between">
+                <div className="text-white">
+                  <h3 className="text-2xl font-bold mb-2">
+                    {currentPortfolioItem.title}
+                  </h3>
+                  <div className="flex items-center gap-4 text-sm text-gray-300">
+                    <span>
+                      {currentImageIndex + 1} /{" "}
+                      {currentPortfolioItem.images.length + 1}
+                    </span>
+                    {currentPortfolioItem.eventDate && (
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        <span>
+                          {formatDate(currentPortfolioItem.eventDate)}
+                        </span>
+                      </div>
+                    )}
+                    {currentPortfolioItem.location && (
+                      <div className="flex items-center gap-1">
+                        <MapPin className="w-4 h-4" />
+                        <span>{currentPortfolioItem.location}</span>
+                      </div>
+                    )}
+                  </div>
+                  {currentPortfolioItem.description && (
+                    <p className="text-gray-300 mt-2 max-w-2xl">
+                      {currentPortfolioItem.description}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      const link = document.createElement("a");
+                      link.href = getCurrentImageUrl();
+                      link.download = `${currentPortfolioItem.title}-${
+                        currentImageIndex + 1
+                      }.jpg`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
+                    className="w-10 h-10 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-all duration-200"
+                    title="İndir"
+                  >
+                    <Download className="w-5 h-5" />
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (navigator.share) {
+                        navigator.share({
+                          title: currentPortfolioItem.title,
+                          text: currentPortfolioItem.description || "",
+                          url: window.location.href,
+                        });
+                      } else {
+                        navigator.clipboard.writeText(window.location.href);
+                        addToast({
+                          title: "Başarılı!",
+                          message: "Link kopyalandı!",
+                          type: "success",
+                        });
+                      }
+                    }}
+                    className="w-10 h-10 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-all duration-200"
+                    title="Paylaş"
+                  >
+                    <Share2 className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Image Thumbnails */}
+              {currentPortfolioItem.images.length > 0 && (
+                <div className="flex gap-2 mt-4 overflow-x-auto">
+                  {/* Cover Image Thumbnail */}
+                  <button
+                    onClick={() => setCurrentImageIndex(0)}
+                    className={`relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-all duration-200 ${
+                      currentImageIndex === 0
+                        ? "border-white"
+                        : "border-transparent opacity-60 hover:opacity-80"
+                    }`}
+                  >
+                    <Image
+                      src={currentPortfolioItem.coverImage}
+                      alt="Cover"
+                      fill
+                      className="object-cover"
+                    />
+                  </button>
+
+                  {/* Other Images Thumbnails */}
+                  {currentPortfolioItem.images.map((img, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentImageIndex(index + 1)}
+                      className={`relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-all duration-200 ${
+                        currentImageIndex === index + 1
+                          ? "border-white"
+                          : "border-transparent opacity-60 hover:opacity-80"
+                      }`}
+                    >
+                      <Image
+                        src={img}
+                        alt={`Image ${index + 1}`}
+                        fill
+                        className="object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Click outside to close */}
+          <div className="absolute inset-0 -z-10" onClick={closeLightbox} />
+        </div>
+      )}
     </div>
   );
 }

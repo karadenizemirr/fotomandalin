@@ -68,9 +68,25 @@ CMD ["node", "server.js"]
 # --- Development stage for local development ---
 FROM node:18-alpine AS development
 WORKDIR /app
+
+# Create a non-root user
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copy package files
 COPY package.json package-lock.json* ./
 RUN npm install --legacy-peer-deps
+
+# Copy source code
 COPY . .
+
+# Create .next directory and set permissions
+RUN mkdir -p .next && chown -R nextjs:nodejs .next
+RUN chown -R nextjs:nodejs /app
+
+# Switch to non-root user
+USER nextjs
+
 ENV NODE_ENV=development
 EXPOSE 3000
 CMD ["npm", "run", "dev"]

@@ -33,8 +33,10 @@ services:
     volumes:
       - ./:/app
       - /app/node_modules
+      - nextjs_cache:/app/.next
     depends_on:
       - postgres
 
 volumes:
   pgdata:
+  nextjs_cache:

@@ -1,0 +1,85 @@
+name: 🚀 Simple EC2 Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: 🚀 Deploy to EC2
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🚀 Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          script: |
+            echo "🔧 Setting up deployment directory..."
+            cd ~
+
+            # Repository'yi clone/pull et
+            if [ ! -d "fotomandalin" ]; then
+              echo "📥 Cloning repository..."
+              git clone https://github.com/${{ github.repository }}.git fotomandalin
+            else
+              echo "🔄 Updating repository..."
+              cd fotomandalin
+              git fetch origin
+              git reset --hard origin/main
+              cd ..
+            fi
+
+            cd fotomandalin
+
+            echo "🔧 Creating environment file..."
+            cat > .env.production << 'EOF'
+            # Database
+            DATABASE_URL=postgresql://fotomandalin_user:your_db_password@db:5432/fotomandalin
+            DIRECT_URL=postgresql://fotomandalin_user:your_db_password@db:5432/fotomandalin
+            DB_PASSWORD=your_db_password
+
+            # Application
+            NODE_ENV=production
+            NEXTAUTH_URL=http://your-ec2-ip
+            NEXTAUTH_SECRET=your-nextauth-secret
+
+            # Payment (test values)
+            IYZICO_API_KEY=your-iyzico-api-key
+            IYZICO_SECRET_KEY=your-iyzico-secret
+            IYZICO_BASE_URL=https://sandbox-api.iyzipay.com
+
+            # AWS S3 (optional)
+            AWS_ACCESS_KEY_ID=your-aws-access-key
+            AWS_SECRET_ACCESS_KEY=your-aws-secret
+            AWS_REGION=eu-west-1
+            AWS_S3_BUCKET_NAME=your-bucket
+
+            # Email (optional)
+            SMTP_HOST=smtp.gmail.com
+            SMTP_PORT=587
+            SMTP_USER=your-email@gmail.com
+            SMTP_PASS=your-app-password
+            EOF
+
+            echo "🛑 Stopping existing containers..."
+            docker-compose -f docker-compose.simple.yml down || true
+
+            echo "🏗️ Building and starting..."
+            docker-compose -f docker-compose.simple.yml up -d --build
+
+            echo "⏳ Waiting for services..."
+            sleep 30
+
+            echo "🗄️ Setting up database..."
+            docker-compose -f docker-compose.simple.yml exec -T app npx prisma migrate deploy || \
+            docker-compose -f docker-compose.simple.yml exec -T app npx prisma db push || echo "Database setup will continue..."
+
+            echo "🧹 Cleanup..."
+            docker image prune -f || true
+
+            echo "✅ Deployment completed!"
+            docker-compose -f docker-compose.simple.yml ps

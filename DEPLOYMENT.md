@@ -1,6 +1,6 @@
-# Fotomandalin EC2 Deployment Guide
+# 🚀 Fotomandalin EC2 Deployment Guide
 
-Bu rehber, Fotomandalin projesi için GitHub Actions kullanarak EC2 üzerine otomatik deployment yapma sürecini açıklar.
+Bu rehber, Fotomandalin projesi için GitHub Actions kullanarak EC2 üzerine otomatik deployment yapma sürecini adım adım açıklar.
 
 ## 🎯 Deployment Özeti
 
@@ -13,88 +13,188 @@ Bu rehber, Fotomandalin projesi için GitHub Actions kullanarak EC2 üzerine oto
 
 ## 📋 Gereksinimler
 
-### EC2 Instance
+### EC2 Instance Özellikleri
 
 - **Minimum:** t3.medium (2 vCPU, 4GB RAM)
 - **Önerilen:** t3.large (2 vCPU, 8GB RAM)
 - **Storage:** 20GB+ SSD
 - **OS:** Ubuntu 22.04 LTS
-- **Security Group:** 22 (SSH), 80 (HTTP), 443 (HTTPS)
+- **Security Group:** 22 (SSH), 80 (HTTP), 443 (HTTPS), 3000 (Node.js)
 
-### Domain ve DNS
+### Domain ve DNS (İsteğe Bağlı)
 
 - Domain adı (örn: fotomandalin.com)
 - A record → EC2 Public IP
 
-## 🚀 Kurulum Adımları
+## 🚀 Adım Adım Kurulum
 
-### 1. EC2 Instance Hazırlama
+### 1️⃣ EC2 Instance Hazırlama
 
-**Yöntem 1: SSH Key ile Otomatik Setup (Önerilen)**
+#### AWS Console'da EC2 Kurulumu:
 
 ```bash
-# EC2'ya SSH bağlantısı
-ssh -i your-key.pem ubuntu@your-ec2-ip
-
-# GitHub SSH key setup (private repo için gerekli)
-ssh-keygen -t ed25519 -C "your-email@domain.com"  # Enter'a basarak default ayarları kabul edin
-cat ~/.ssh/id_ed25519.pub  # Bu key'i GitHub → Settings → SSH Keys'e ekleyin
-
-# SSH bağlantısını test et (ilk seferinde "yes" yazın)
-ssh -T git@github.com
-
-# Eğer "Host key verification failed" hatası alırsanız:
-# "Are you sure you want to continue connecting (yes/no)?" → yes yazın
-
-# Projeyi EC2'ye clone et
-cd /home/$USER
-git clone git@github.com:karadenizemirr/fotomandalin.git
-cd fotomandalin
-
-# Setup scriptini çalıştır
-chmod +x scripts/ec2-setup.sh
-./scripts/ec2-setup.sh
+# EC2 Instance Launch:
+# - AMI: Ubuntu 22.04 LTS
+# - Instance Type: t3.medium (minimum)
+# - Key Pair: Yeni oluştur veya mevcut kullan
+# - Security Group: SSH (22), HTTP (80), HTTPS (443), Custom (3000)
 ```
 
-**Yöntem 2: Manuel Setup**
+#### EC2'ya Bağlantı:
 
 ```bash
-# EC2'ya SSH bağlantısı
-ssh -i your-key.pem ubuntu@your-ec2-ip
+# Local terminalden EC2'ya bağlan
+ssh -i your-key.pem ubuntu@your-ec2-public-ip
 
-# Temel paketleri kur
+# Sistem güncellemesi
 sudo apt update && sudo apt upgrade -y
-curl -fsSL https://get.docker.com -o get-docker.sh && sudo sh get-docker.sh
+```
+
+### 2️⃣ Docker Kurulumu
+
+```bash
+# Docker kurulumu
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
 sudo usermod -aG docker $USER
+
+# Docker Compose kurulumu
 sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 sudo chmod +x /usr/local/bin/docker-compose
-sudo apt install -y git nginx-full certbot python3-certbot-nginx
 
-# Proje dizini oluştur ve clone et
-cd /home/$USER
-git clone https://github.com/karadenizemirr/fotomandalin.git
-cd fotomandalin
+# Gerekli diğer paketler
+sudo apt install -y git nginx-full certbot python3-certbot-nginx curl
 
-# VEYA SSH key kurulumunu tamamladıysanız:
-# git clone git@github.com:karadenizemirr/fotomandalin.git
-
-# Environment dosyası oluştur
-cp .env .env.production
-nano .env.production  # Gerekli değişkenleri düzenleyin
-
-# Production compose dosyasını local build için düzenle
-sed -i 's/image: ghcr.io\/karadenizemirr\/fotomandalin:latest/build: ./g' docker-compose.prod.yml
-
-# İlk deployment (local build)
-docker-compose -f docker-compose.prod.yml up --build -d
-
-# Reboot (Docker için)
+# Docker grubuna dahil olmak için logout/login
 sudo reboot
 ```
 
-### 2. GitHub Secrets Konfigürasyonu
+### 3️⃣ GitHub SSH Key Setup (Private Repo İçin)
 
-GitHub repository → Settings → Secrets and variables → Actions
+```bash
+# EC2'ya tekrar bağlan
+ssh -i your-key.pem ubuntu@your-ec2-public-ip
+
+# SSH key oluştur
+ssh-keygen -t ed25519 -C "your-email@domain.com"
+# Enter'a basarak default ayarları kabul edin
+
+# Public key'i görüntüle
+cat ~/.ssh/id_ed25519.pub
+
+# Bu çıktıyı kopyala ve GitHub → Settings → SSH Keys'e ekle
+```
+
+#### GitHub SSH Test:
+
+```bash
+# SSH bağlantısını test et
+ssh -T git@github.com
+# "yes" yazıp Enter'a basın
+# "Hi username! You've successfully authenticated..." mesajını görmelisiniz
+```
+
+### 4️⃣ Projeyi Clone Etme
+
+```bash
+# Home dizinine git
+cd /home/ubuntu
+
+# SSH ile clone (önerilen)
+git clone git@github.com:karadenizemirr/fotomandalin.git
+
+# VEYA HTTPS ile clone (SSH sorunları varsa)
+# git clone https://github.com/karadenizemirr/fotomandalin.git
+
+# Proje dizinine gir
+cd fotomandalin
+ls -la  # Dosyaları kontrol et
+```
+
+### 5️⃣ Environment Dosyası Oluşturma
+
+```bash
+# .env.production dosyası oluştur
+cp .env .env.production
+
+# Dosyayı düzenle
+nano .env.production
+```
+
+#### .env.production İçeriği:
+
+```bash
+# Production Environment
+NODE_ENV=production
+
+# Database Configuration
+DATABASE_URL=postgresql://fotomandalin_user:fotomandalin_secure_password@postgres:5432/fotomandalin
+POSTGRES_PASSWORD=fotomandalin_secure_password
+
+# NextAuth Configuration
+NEXTAUTH_URL=http://YOUR_EC2_PUBLIC_IP:3000
+NEXTAUTH_SECRET=your-super-secure-secret-minimum-32-characters-long
+
+# AWS S3 Configuration
+AWS_S3_BUCKET_NAME=fotomandalin
+AWS_ACCESS_KEY_ID=your-aws-access-key
+AWS_SECRET_ACCESS_KEY=your-aws-secret-key
+AWS_REGION=eu-north-1
+AWS_S3_BUCKET_URL=https://fotomandalin.s3.eu-north-1.amazonaws.com
+
+# Application URLs
+NEXT_PUBLIC_APP_URL=http://YOUR_EC2_PUBLIC_IP:3000
+NEXT_PUBLIC_AWS_S3_BUCKET_URL=https://fotomandalin.s3.eu-north-1.amazonaws.com
+
+# File Upload Settings
+MAX_FILE_SIZE=10485760
+UPLOAD_MAX_FILES=image/jpeg,image/png,image/webp,image/gif,video/mp4
+```
+
+**💡 Önemli:** `YOUR_EC2_PUBLIC_IP` kısmını gerçek EC2 public IP'niz ile değiştirin!
+
+### 6️⃣ Docker Compose Production Setup
+
+#### docker-compose.prod.yml'yi Kontrol Et:
+
+```bash
+# Dosyanın doğru configure edildiğini kontrol et
+cat docker-compose.prod.yml
+```
+
+#### İlk Production Build:
+
+```bash
+# Container'ları build et ve başlat
+docker-compose -f docker-compose.prod.yml up --build -d
+
+# Container durumlarını kontrol et
+docker-compose -f docker-compose.prod.yml ps
+
+# Logları takip et
+docker-compose -f docker-compose.prod.yml logs -f
+```
+
+### 7️⃣ Test ve Doğrulama
+
+```bash
+# Container'ların sağlık durumunu kontrol et
+docker-compose -f docker-compose.prod.yml ps
+
+# Web uygulamasını test et
+curl http://localhost:3000/api/health
+
+# Veya browser'dan
+# http://YOUR_EC2_PUBLIC_IP:3000
+```
+
+## 🔧 GitHub Actions Otomatik Deployment
+
+### 8️⃣ GitHub Secrets Konfigürasyonu
+
+GitHub Repository → Settings → Secrets and variables → Actions → New repository secret
+
+#### Gerekli Secrets:
 
 ```bash
 # EC2 Bağlantı Bilgileri
@@ -103,247 +203,144 @@ EC2_USER=ubuntu
 EC2_SSH_KEY=your-private-ssh-key-content
 
 # Database
-DATABASE_URL=postgresql://fotomandalin_user:secure_password@postgres:5432/fotomandalin
+DATABASE_URL=postgresql://fotomandalin_user:fotomandalin_secure_password@postgres:5432/fotomandalin
 
 # NextAuth
-NEXTAUTH_URL=https://your-domain.com
-NEXTAUTH_SECRET=generate-secure-secret-here
+NEXTAUTH_URL=http://your-ec2-public-ip:3000
+NEXTAUTH_SECRET=your-super-secure-secret-minimum-32-characters
 
 # AWS S3
 AWS_ACCESS_KEY_ID=your-aws-access-key
 AWS_SECRET_ACCESS_KEY=your-aws-secret-key
-AWS_REGION=eu-west-1
-AWS_S3_BUCKET_NAME=your-s3-bucket
+AWS_REGION=eu-north-1
+AWS_S3_BUCKET_NAME=fotomandalin
 
-# Payment (Iyzico)
-IYZICO_API_KEY=your-iyzico-api-key
-IYZICO_SECRET_KEY=your-iyzico-secret-key
-
-# Email (SMTP)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASS=your-app-password
+# Application
+NODE_ENV=production
 ```
 
-### 3. SSL Sertifikası (Let's Encrypt)
+### 9️⃣ SSL Sertifikası (Domain Varsa)
 
 ```bash
-# EC2'da çalıştır
+# Domain'iniz varsa SSL kurulumu
 sudo certbot --nginx -d your-domain.com
 sudo certbot renew --dry-run
+
+# Auto-renewal için crontab
+sudo crontab -e
+# Bu satırı ekleyin:
+# 0 2 * * * /usr/bin/certbot renew --quiet
 ```
 
-### 4. İlk Deployment
+## 🔄 Otomatik Deployment
+
+### Local'dan Değişiklik Push Etme:
 
 ```bash
-# Local'dan push yap
+# Local'da değişiklik yaptıktan sonra
+git add .
+git commit -m "Production deployment setup"
 git push origin main
 
 # GitHub Actions otomatik olarak:
 # ✅ Tests çalıştırır
-# ✅ Docker image build eder
-# ✅ ECR'a push eder
-# ✅ EC2'ya deploy eder
+# 🐳 Docker image build eder
+# 📦 GitHub Container Registry'ye push eder
+# 🚀 EC2'ya deploy eder
 ```
-
-## 🔧 Deployment Süreci
-
-### GitHub Actions Workflow
-
-1. **Test Stage**
-
-   - Dependencies install
-   - Type checking
-   - Linting
-
-2. **Build Stage**
-
-   - Docker image build
-   - Multi-stage production build
-   - GitHub Container Registry push
-
-3. **Deploy Stage**
-   - EC2'ya SSH bağlantısı
-   - Environment variables setup
-   - Docker container güncelleme
-   - Health check
-   - Database migration
-
-### Deployment Triggers
-
-- `main` branch push → Production deployment
-- `production` branch push → Production deployment
-- Manual trigger → Workflow dispatch
 
 ## 📊 Monitoring ve Maintenance
 
-### Health Check
+### Container Durumu Kontrolü:
 
 ```bash
-# EC2'da
-./monitor.sh
+# Container'ları kontrol et
+docker-compose -f docker-compose.prod.yml ps
 
-# Web'den
-curl https://your-domain.com/api/health
+# Logları görüntüle
+docker-compose -f docker-compose.prod.yml logs web
+docker-compose -f docker-compose.prod.yml logs postgres
+
+# Resource kullanımı
+docker stats
 ```
 
-### Logs
+### Backup İşlemleri:
 
 ```bash
-# Application logs
-docker-compose -f docker-compose.prod.yml logs -f web
+# Database backup
+docker-compose -f docker-compose.prod.yml exec postgres pg_dump -U fotomandalin_user fotomandalin > backup_$(date +%Y%m%d).sql
 
-# Nginx logs
-sudo tail -f /var/log/nginx/access.log
-sudo tail -f /var/log/nginx/error.log
-
-# System logs
-./logs/monitor.log
-./logs/backup.log
-```
-
-### Backup
-
-```bash
-# Manuel backup
-./backup.sh
-
-# Otomatik backup (cron): Her gece 02:00
-# - Database dump
-# - Uploads tar.gz
-# - 7 gün saklanır
-```
-
-## 🔄 Rollback Süreci
-
-```bash
-# EC2'da önceki image'a dön
-docker images
-docker tag OLD_IMAGE_ID ghcr.io/karadenizemirr/fotomandalin:latest
-docker-compose -f docker-compose.prod.yml up -d
+# Uploads backup
+tar -czf uploads_backup_$(date +%Y%m%d).tar.gz public/uploads/
 ```
 
 ## 🐛 Troubleshooting
 
-### Git Clone Sorunları
+### Yaygın Sorunlar:
+
+#### 1. Database Bağlantı Hatası:
 
 ```bash
-# Permission denied (public key) hatası
-# 1. SSH key oluştur
-ssh-keygen -t ed25519 -C "your-email@domain.com"
+# PostgreSQL durumunu kontrol et
+docker-compose -f docker-compose.prod.yml exec postgres pg_isready -U fotomandalin_user -d fotomandalin
 
-# 2. Public key'i kopyala ve GitHub'a ekle
-cat ~/.ssh/id_ed25519.pub  # Bu çıktıyı GitHub → Settings → SSH Keys'e ekle
-
-# 3. SSH bağlantısını test et
-ssh -T git@github.com
-
-# 4. Clone işlemini tekrar dene
-git clone git@github.com:karadenizemirr/fotomandalin.git
-
-# VEYA HTTPS ile clone (hızlı çözüm)
-git clone https://github.com/karadenizemirr/fotomandalin.git
-
-# Private repo için personal access token
-# GitHub → Settings → Developer settings → Personal access tokens
-git clone https://username:token@github.com/karadenizemirr/fotomandalin.git
-
-# DİKKAT: sudo kullanmayın git işlemleri için!
-```
-
-### Container Başlamıyor
-
-```bash
-# GHCR image bulunamıyorsa (ilk deployment'ta yaygın)
-# docker-compose.prod.yml dosyasını local build için düzenle
-sed -i 's/image: ghcr.io\/karadenizemirr\/fotomandalin:latest/build: ./g' docker-compose.prod.yml
-
-# Local build ile çalıştır
-docker-compose -f docker-compose.prod.yml up --build -d
-
-# Logları kontrol et
-docker-compose -f docker-compose.prod.yml logs web
-docker-compose -f docker-compose.prod.yml restart web
-```
-
-### Database Bağlantı Hatası
-
-```bash
-docker-compose -f docker-compose.prod.yml exec postgres pg_isready
+# Container'ı yeniden başlat
 docker-compose -f docker-compose.prod.yml restart postgres
 ```
 
-### SSL Sertifika Problemi
+#### 2. Container Build Hatası:
 
 ```bash
-sudo certbot renew
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-### Disk Dolmuş
-
-```bash
-# Docker cleanup
+# Cache'i temizle ve yeniden build et
+docker-compose -f docker-compose.prod.yml down
 docker system prune -a
-docker volume prune
-
-# Log cleanup
-sudo journalctl --vacuum-time=7d
+docker-compose -f docker-compose.prod.yml up --build -d
 ```
 
-## 📈 Performance Optimization
+#### 3. Port Çakışması:
 
-### Nginx Caching
+```bash
+# Kullanılan portları kontrol et
+sudo netstat -tlnp | grep -E ':(80|443|3000|5432)'
 
-- Static files: 1 year cache
-- API responses: No cache
-- Uploads: 30 days cache
+# Çakışan process'i sonlandır
+sudo pkill -f ":3000"
+```
 
-### Docker Optimizations
+#### 4. Log Kontrolü:
 
-- Multi-stage build
-- Alpine Linux base
-- .dockerignore file
-- Health checks
+```bash
+# Detaylı loglar
+docker-compose -f docker-compose.prod.yml logs --tail=100 web
+docker-compose -f docker-compose.prod.yml logs --tail=100 postgres
+```
 
-### Database
+## 🔐 Güvenlik
 
-- Connection pooling
-- Index optimization
-- Regular backups
+### Firewall Kurulumu:
 
-## 🔐 Security
+```bash
+# UFW firewall aktifleştir
+sudo ufw enable
+sudo ufw allow 22/tcp
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw allow 3000/tcp
+sudo ufw status
+```
 
-### Network Security
-
-- UFW firewall
-- Security groups
-- Rate limiting (Nginx)
-
-### Application Security
-
-- Environment variables
-- SSL/TLS encryption
-- Security headers
-- Input validation
-
-### Monitoring
-
-- Health checks
-- Log monitoring
-- Resource monitoring
-- Backup verification
-
-## 📞 Support
+## 📞 Destek
 
 Deployment sorunları için:
 
-1. GitHub Issues açın
-2. Logs ve error messages ekleyin
-3. Environment details belirtin
+1. Container loglarını kontrol edin
+2. Environment variables'ları doğrulayın
+3. Database bağlantısını test edin
+4. GitHub Issues açın ve log çıktılarını paylaşın
 
-## 🔄 Updates
+---
 
-Bu deployment guide düzenli olarak güncellenir. Son güncelleme: 2025-01-24
+**Son Güncelleme:** 25 Temmuz 2025
+
+Bu rehberi takip ederek Fotomandalin projenizi EC2'de başarıyla deploy edebilirsiniz! 🎉

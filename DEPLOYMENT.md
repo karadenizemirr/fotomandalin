@@ -185,44 +185,6 @@ docker compose -f docker-compose.prod.yml ps
 docker compose -f docker-compose.prod.yml logs -f
 ```
 
-#### ⚠️ Yaygın Build ve Runtime Hataları:
-
-**1. Hata:** `PrismaClientConstructorValidationError: Invalid value undefined for datasource "db"`
-- **Sebep:** Build sırasında DATABASE_URL tanımlı değil
-- **Çözüm:** Build args ile environment variables geçirildi
-
-**2. Hata:** `sh: next: not found`
-- **Sebep:** Production container'da next CLI bulunmuyor
-- **Çözüm:** Standalone output ile `node server.js` kullanılıyor
-
-```bash
-# Sorun çözümü için güncellenmiş build komutu:
-# 1. Mevcut container'ları durdurun
-docker compose -f docker-compose.prod.yml down
-
-# 2. Cache'i temizleyin
-docker system prune -f
-
-# 3. .env.production dosyasını kontrol edin
-ls -la .env.production
-
-# 4. Yeniden build edin
-docker compose -f docker-compose.prod.yml up --build -d
-
-# 5. Container durumunu kontrol edin
-docker compose -f docker-compose.prod.yml ps
-
-# 6. Logları takip edin
-docker compose -f docker-compose.prod.yml logs -f web
-```
-
-**Beklenen Başarılı Çıktı:**
-```
-fotomandalin_web_prod | ▲ Next.js 15.4.1
-fotomandalin_web_prod | - Local:        http://localhost:3000
-fotomandalin_web_prod | ✓ Ready in XXXms
-```
-
 #### ⚠️ Build Hatası Çözümü:
 
 **Hata:** `PrismaClientConstructorValidationError: Invalid value undefined for datasource "db"`
@@ -305,58 +267,6 @@ git pull origin main
 git stash pop
 ```
 
-### 🛠️ EC2'de Güncellenmiş Deployment Adımları:
-
-```bash
-# EC2'de projeyi güncellemek için:
-
-# 1. EC2'ya bağlanın
-ssh -i your-key.pem ec2-user@your-ec2-public-ip
-
-# 2. Proje dizinine gidin
-cd /home/ec2-user/fotomandalin
-
-# 3. GitHub'dan son değişiklikleri çekin
-git pull origin main
-
-# 4. Container'ları durdurun
-docker compose -f docker-compose.prod.yml down
-
-# 5. Cache'i temizleyin
-docker system prune -f
-
-# 6. .env.production dosyasını kontrol edin
-cat .env.production
-
-# 7. Docker build'i çalıştırın
-docker compose -f docker-compose.prod.yml up --build -d
-
-# 8. Container durumunu kontrol edin
-docker compose -f docker-compose.prod.yml ps
-
-# 9. Logları takip edin
-docker compose -f docker-compose.prod.yml logs -f web
-
-# 10. Uygulama çalışıyor mu test edin
-curl http://localhost:3000/api/health
-```
-
-**Önemli:** Git pull yapmadan önce local değişiklikleriniz varsa:
-
-```bash
-# Local değişiklikleri kontrol edin
-git status
-
-# Gerekirse local değişiklikleri stash'leyin
-git stash
-
-# GitHub'dan değişiklikleri çekin
-git pull origin main
-
-# Eğer gerekirse stash'lenmiş değişiklikleri geri getirin
-git stash pop
-```
-
 ### 7️⃣ Test ve Doğrulama
 
 ```bash
@@ -401,17 +311,84 @@ AWS_S3_BUCKET_NAME=fotomandalin
 NODE_ENV=production
 ```
 
-### 9️⃣ SSL Sertifikası (Domain Varsa)
+### 9️⃣ Domain ve SSL Sertifikası Kurulumu
+
+#### Domain DNS Ayarları:
 
 ```bash
-# Domain'iniz varsa SSL kurulumu
-sudo certbot --nginx -d your-domain.com
-sudo certbot renew --dry-run
+# Domain sağlayıcınızda (GoDaddy, Namecheap, vs.) aşağıdaki DNS kayıtlarını ekleyin:
+#
+# Type: A Record
+# Name: @ (veya boş)
+# Value: YOUR_EC2_PUBLIC_IP
+# TTL: 300 (veya en düşük değer)
+#
+# Type: A Record
+# Name: www
+# Value: YOUR_EC2_PUBLIC_IP
+# TTL: 300 (veya en düşük değer)
+```
 
-# Auto-renewal için crontab
+#### SSL Sertifikası Kurulumu (Let's Encrypt):
+
+```bash
+# EC2'ya bağlanın
+ssh -i your-key.pem ec2-user@your-ec2-public-ip
+
+# Certbot kurulumunu kontrol edin (zaten kurulu olmalı)
+sudo dnf list installed | grep certbot
+
+# DNS propagation kontrol edin
+nslookup fotomandalin.com
+ping fotomandalin.com
+
+# Nginx'i durdurun (SSL kurulumu için)
+docker compose -f docker-compose.prod.yml stop nginx
+
+# Let's Encrypt sertifikası alın (domain'inizi değiştirin)
+sudo certbot certonly --standalone \
+    --preferred-challenges http \
+    --email your-email@domain.com \
+    --agree-tos \
+    --no-eff-email \
+    -d fotomandalin.com \
+    -d www.fotomandalin.com
+
+# Sertifika dosyalarını kontrol edin
+sudo ls -la /etc/letsencrypt/live/fotomandalin.com/
+
+# Container'ları güncellenmiş nginx konfigürasyonuyla başlatın
+docker compose -f docker-compose.prod.yml up -d
+
+# Nginx loglarını kontrol edin
+docker compose -f docker-compose.prod.yml logs nginx
+
+# SSL test edin
+curl -I https://fotomandalin.com
+```
+
+#### SSL Auto-Renewal Kurulumu:
+
+```bash
+# Crontab'ı düzenleyin
 sudo crontab -e
-# Bu satırı ekleyin:
-# 0 2 * * * /usr/bin/certbot renew --quiet
+
+# Aşağıdaki satırı ekleyin (her gün 2:00'da renewal kontrol)
+0 2 * * * /usr/bin/certbot renew --quiet && docker compose -f /home/ec2-user/fotomandalin/docker-compose.prod.yml restart nginx
+
+# Renewal test edin
+sudo certbot renew --dry-run
+```
+
+#### .env.production Domain Güncellemesi:
+
+```bash
+# .env.production dosyasını düzenleyin
+nano .env.production
+
+# Aşağıdaki değerleri güncelleyin:
+# NEXTAUTH_URL=https://fotomandalin.com
+# NEXT_PUBLIC_APP_URL=https://fotomandalin.com
 ```
 
 ## 🔄 Otomatik Deployment
@@ -498,6 +475,44 @@ docker compose -f docker-compose.prod.yml logs --tail=100 web
 docker compose -f docker-compose.prod.yml logs --tail=100 postgres
 ```
 
+#### 5. Domain ve SSL Sorunları:
+
+```bash
+# DNS propagation kontrol
+nslookup fotomandalin.com
+dig fotomandalin.com
+
+# Nginx konfigürasyonu test
+docker compose -f docker-compose.prod.yml exec nginx nginx -t
+
+# SSL sertifika durumu kontrol
+sudo certbot certificates
+
+# SSL sertifika yenileme
+sudo certbot renew --force-renewal
+
+# Domain erişim test
+curl -I http://fotomandalin.com
+curl -I https://fotomandalin.com
+
+# Nginx error logları
+docker compose -f docker-compose.prod.yml logs nginx | grep error
+```
+
+#### 6. Firewall ve Port Sorunları:
+
+```bash
+# Firewall durumunu kontrol et
+sudo firewall-cmd --list-all
+
+# Port erişilebilirlik test (local'dan)
+telnet your-ec2-ip 80
+telnet your-ec2-ip 443
+
+# Nginx container port mapping kontrol
+docker compose -f docker-compose.prod.yml ps nginx
+```
+
 ## 🔐 Güvenlik
 
 ### Firewall Kurulumu (Amazon Linux 2023):
@@ -550,7 +565,51 @@ sudo setsebool -P container_manage_cgroup on
 - Varsayılan kullanıcı `ec2-user`'dır
 - Home dizini `/home/ec2-user/`
 
-## 📞 Destek
+## � Hızlı Domain ve SSL Kurulum Özeti
+
+### EC2'de Çalıştırmanız Gerekenler:
+
+```bash
+# 1. Projeyi güncelleyin
+cd /home/ec2-user/fotomandalin
+git pull origin main
+
+# 2. Domain'inizi nginx.conf dosyasında güncelleyin
+sudo nano nginx/nginx.conf
+# fotomandalin.com kısmını kendi domain'inizle değiştirin
+
+# 3. .env.production dosyasını güncelleyin
+nano .env.production
+# NEXTAUTH_URL ve NEXT_PUBLIC_APP_URL'i domain'inizle güncelleyin
+
+# 4. Container'ları durdurun
+docker compose -f docker-compose.prod.yml down
+
+# 5. DNS propagation kontrol edin
+nslookup your-domain.com
+
+# 6. SSL sertifikası alın
+sudo certbot certonly --standalone \
+    --email your-email@domain.com \
+    --agree-tos \
+    -d your-domain.com \
+    -d www.your-domain.com
+
+# 7. Container'ları başlatın
+docker compose -f docker-compose.prod.yml up -d
+
+# 8. Test edin
+curl -I https://your-domain.com
+```
+
+### ✅ Başarılı Kurulum Sonrası:
+
+- 🌐 `https://your-domain.com` adresinden erişilebilir
+- 🔒 SSL sertifikası aktif (Let's Encrypt)
+- 🔄 HTTP'den HTTPS'e otomatik yönlendirme
+- ⚡ Nginx reverse proxy ile performans optimizasyonu
+
+## �📞 Destek
 
 Deployment sorunları için:
 

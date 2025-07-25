@@ -185,6 +185,44 @@ docker compose -f docker-compose.prod.yml ps
 docker compose -f docker-compose.prod.yml logs -f
 ```
 
+#### ⚠️ Yaygın Build ve Runtime Hataları:
+
+**1. Hata:** `PrismaClientConstructorValidationError: Invalid value undefined for datasource "db"`
+- **Sebep:** Build sırasında DATABASE_URL tanımlı değil
+- **Çözüm:** Build args ile environment variables geçirildi
+
+**2. Hata:** `sh: next: not found`
+- **Sebep:** Production container'da next CLI bulunmuyor
+- **Çözüm:** Standalone output ile `node server.js` kullanılıyor
+
+```bash
+# Sorun çözümü için güncellenmiş build komutu:
+# 1. Mevcut container'ları durdurun
+docker compose -f docker-compose.prod.yml down
+
+# 2. Cache'i temizleyin
+docker system prune -f
+
+# 3. .env.production dosyasını kontrol edin
+ls -la .env.production
+
+# 4. Yeniden build edin
+docker compose -f docker-compose.prod.yml up --build -d
+
+# 5. Container durumunu kontrol edin
+docker compose -f docker-compose.prod.yml ps
+
+# 6. Logları takip edin
+docker compose -f docker-compose.prod.yml logs -f web
+```
+
+**Beklenen Başarılı Çıktı:**
+```
+fotomandalin_web_prod | ▲ Next.js 15.4.1
+fotomandalin_web_prod | - Local:        http://localhost:3000
+fotomandalin_web_prod | ✓ Ready in XXXms
+```
+
 #### ⚠️ Build Hatası Çözümü:
 
 **Hata:** `PrismaClientConstructorValidationError: Invalid value undefined for datasource "db"`
@@ -224,23 +262,99 @@ DATABASE_URL=postgresql://fotomandalin_user:fotomandalin_secure_password@postgre
 ### 🛠️ Sorun Çözüldü! Şimdi Tekrar Deneyin:
 
 ```bash
-# 1. Önce mevcut container'ları durdurun
+# EC2'de projeyi güncellemek için:
+
+# 1. Proje dizinine gidin
+cd /home/ec2-user/fotomandalin
+
+# 2. GitHub'dan son değişiklikleri çekin
+git pull origin main
+
+# 3. Eğer değişiklik varsa, mevcut container'ları durdurun
 docker compose -f docker-compose.prod.yml down
 
-# 2. Cache'i temizleyin
+# 4. Cache'i temizleyin
 docker system prune -f
 
-# 3. .env.production dosyasında gerekli değişkenlerin olduğunu kontrol edin
+# 5. .env.production dosyasında gerekli değişkenlerin olduğunu kontrol edin
 cat .env.production
 
-# 4. Docker build'i tekrar çalıştırın
+# 6. Docker build'i tekrar çalıştırın
 docker compose -f docker-compose.prod.yml up --build -d
 
-# 5. Build durumunu takip edin
+# 7. Build durumunu takip edin
 docker compose -f docker-compose.prod.yml logs -f web
 
-# 6. Container'ların çalışıp çalışmadığını kontrol edin
+# 8. Container'ların çalışıp çalışmadığını kontrol edin
 docker compose -f docker-compose.prod.yml ps
+```
+
+**Önemli:** Git pull yapmadan önce local değişiklikleriniz varsa:
+
+```bash
+# Local değişiklikleri kontrol edin
+git status
+
+# Gerekirse local değişiklikleri stash'leyin
+git stash
+
+# GitHub'dan değişiklikleri çekin
+git pull origin main
+
+# Eğer gerekirse stash'lenmiş değişiklikleri geri getirin
+git stash pop
+```
+
+### 🛠️ EC2'de Güncellenmiş Deployment Adımları:
+
+```bash
+# EC2'de projeyi güncellemek için:
+
+# 1. EC2'ya bağlanın
+ssh -i your-key.pem ec2-user@your-ec2-public-ip
+
+# 2. Proje dizinine gidin
+cd /home/ec2-user/fotomandalin
+
+# 3. GitHub'dan son değişiklikleri çekin
+git pull origin main
+
+# 4. Container'ları durdurun
+docker compose -f docker-compose.prod.yml down
+
+# 5. Cache'i temizleyin
+docker system prune -f
+
+# 6. .env.production dosyasını kontrol edin
+cat .env.production
+
+# 7. Docker build'i çalıştırın
+docker compose -f docker-compose.prod.yml up --build -d
+
+# 8. Container durumunu kontrol edin
+docker compose -f docker-compose.prod.yml ps
+
+# 9. Logları takip edin
+docker compose -f docker-compose.prod.yml logs -f web
+
+# 10. Uygulama çalışıyor mu test edin
+curl http://localhost:3000/api/health
+```
+
+**Önemli:** Git pull yapmadan önce local değişiklikleriniz varsa:
+
+```bash
+# Local değişiklikleri kontrol edin
+git status
+
+# Gerekirse local değişiklikleri stash'leyin
+git stash
+
+# GitHub'dan değişiklikleri çekin
+git pull origin main
+
+# Eğer gerekirse stash'lenmiş değişiklikleri geri getirin
+git stash pop
 ```
 
 ### 7️⃣ Test ve Doğrulama

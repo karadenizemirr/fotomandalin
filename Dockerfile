@@ -13,6 +13,17 @@ RUN npm ci && npm cache clean --force
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
+
+# Build arguments for environment variables
+ARG DATABASE_URL
+ARG NEXTAUTH_SECRET
+ARG NEXTAUTH_URL
+
+# Set environment variables for build
+ENV DATABASE_URL=${DATABASE_URL}
+ENV NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+ENV NEXTAUTH_URL=${NEXTAUTH_URL}
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 

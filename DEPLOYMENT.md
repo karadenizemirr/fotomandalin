@@ -37,14 +37,23 @@ Bu rehber, Fotomandalin projesi için GitHub Actions kullanarak EC2 üzerine oto
 ssh -i your-key.pem ubuntu@your-ec2-ip
 
 # GitHub SSH key setup (private repo için gerekli)
-ssh-keygen -t ed25519 -C "your-email@domain.com"
+ssh-keygen -t ed25519 -C "your-email@domain.com"  # Enter'a basarak default ayarları kabul edin
 cat ~/.ssh/id_ed25519.pub  # Bu key'i GitHub → Settings → SSH Keys'e ekleyin
 
-# SSH bağlantısını test et
+# SSH bağlantısını test et (ilk seferinde "yes" yazın)
 ssh -T git@github.com
 
-# Setup scriptini manuel çalıştır (repository'den kopyala)
-# ec2-setup.sh dosyasını EC2'ya kopyala ve çalıştır
+# Eğer "Host key verification failed" hatası alırsanız:
+# "Are you sure you want to continue connecting (yes/no)?" → yes yazın
+
+# Projeyi EC2'ye clone et
+cd /home/$USER
+git clone git@github.com:karadenizemirr/fotomandalin.git
+cd fotomandalin
+
+# Setup scriptini çalıştır
+chmod +x scripts/ec2-setup.sh
+./scripts/ec2-setup.sh
 ```
 
 **Yöntem 2: Manuel Setup**
@@ -61,12 +70,23 @@ sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-
 sudo chmod +x /usr/local/bin/docker-compose
 sudo apt install -y git nginx-full certbot python3-certbot-nginx
 
-# Proje dizini oluştur
-mkdir -p /home/$USER/fotomandalin
-cd /home/$USER/fotomandalin
+# Proje dizini oluştur ve clone et
+cd /home/$USER
+git clone https://github.com/karadenizemirr/fotomandalin.git
+cd fotomandalin
 
-# Repository dosyalarını SCP ile kopyala (local'dan)
-# scp -i your-key.pem -r . ubuntu@your-ec2-ip:/home/ubuntu/fotomandalin/
+# VEYA SSH key kurulumunu tamamladıysanız:
+# git clone git@github.com:karadenizemirr/fotomandalin.git
+
+# Environment dosyası oluştur
+cp .env .env.production
+nano .env.production  # Gerekli değişkenleri düzenleyin
+
+# Production compose dosyasını local build için düzenle
+sed -i 's/image: ghcr.io\/karadenizemirr\/fotomandalin:latest/build: ./g' docker-compose.prod.yml
+
+# İlk deployment (local build)
+docker-compose -f docker-compose.prod.yml up --build -d
 
 # Reboot (Docker için)
 sudo reboot
@@ -206,9 +226,43 @@ docker-compose -f docker-compose.prod.yml up -d
 
 ## 🐛 Troubleshooting
 
+### Git Clone Sorunları
+
+```bash
+# Permission denied (public key) hatası
+# 1. SSH key oluştur
+ssh-keygen -t ed25519 -C "your-email@domain.com"
+
+# 2. Public key'i kopyala ve GitHub'a ekle
+cat ~/.ssh/id_ed25519.pub  # Bu çıktıyı GitHub → Settings → SSH Keys'e ekle
+
+# 3. SSH bağlantısını test et
+ssh -T git@github.com
+
+# 4. Clone işlemini tekrar dene
+git clone git@github.com:karadenizemirr/fotomandalin.git
+
+# VEYA HTTPS ile clone (hızlı çözüm)
+git clone https://github.com/karadenizemirr/fotomandalin.git
+
+# Private repo için personal access token
+# GitHub → Settings → Developer settings → Personal access tokens
+git clone https://username:token@github.com/karadenizemirr/fotomandalin.git
+
+# DİKKAT: sudo kullanmayın git işlemleri için!
+```
+
 ### Container Başlamıyor
 
 ```bash
+# GHCR image bulunamıyorsa (ilk deployment'ta yaygın)
+# docker-compose.prod.yml dosyasını local build için düzenle
+sed -i 's/image: ghcr.io\/karadenizemirr\/fotomandalin:latest/build: ./g' docker-compose.prod.yml
+
+# Local build ile çalıştır
+docker-compose -f docker-compose.prod.yml up --build -d
+
+# Logları kontrol et
 docker-compose -f docker-compose.prod.yml logs web
 docker-compose -f docker-compose.prod.yml restart web
 ```

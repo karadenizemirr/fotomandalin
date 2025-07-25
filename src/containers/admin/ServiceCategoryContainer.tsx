@@ -13,7 +13,7 @@ import {
   NumberField,
 } from "@/components/organisms/form/FormField";
 import { Dialog, ConfirmDialog } from "@/components/organisms/dialog";
-import Upload, { UploadedFile } from "@/components/organisms/upload/Upload";
+import WebPUploader from "@/components/organisms/upload/WebPUploader";
 import {
   Plus,
   Edit,
@@ -101,18 +101,17 @@ export default function ServiceCategoryContainer() {
     includeInactive: false,
     limit: 50,
   });
-  const [uploadedImage, setUploadedImage] = useState<UploadedFile | null>(null);
+  const [uploadedImage, setUploadedImage] = useState<any | null>(null);
   const [isImageRemoved, setIsImageRemoved] = useState(false);
   useEffect(() => {
     if (editingCategory?.image && !isImageRemoved) {
       setUploadedImage({
-        id: "existing-image",
-        name: "Kategori Resmi",
-        size: 0,
-        type: "image/jpeg",
-        url: editingCategory.image,
-        uploadedAt: new Date(),
-        status: "success" as const,
+        webpPath: editingCategory.image,
+        originalSize: 0,
+        webpSize: 0,
+        compressionRatio: 0,
+        width: 0,
+        height: 0,
       });
     } else {
       setUploadedImage(null);
@@ -216,7 +215,7 @@ export default function ServiceCategoryContainer() {
       // Handle image: if removed, set to undefined, otherwise use uploaded or existing image
       const imageUrl = isImageRemoved
         ? undefined
-        : uploadedImage?.url || data.image || undefined;
+        : uploadedImage?.webpPath || data.image || undefined;
 
       // Clean up empty strings by converting them to undefined
       const cleanFormData = {
@@ -444,13 +443,12 @@ export default function ServiceCategoryContainer() {
         if (record.image && record.image.trim() !== "") {
           console.log("DEBUG: Setting existing category image:", record.image);
           setUploadedImage({
-            id: "existing-image",
-            name: "Kategori Resmi",
-            size: 0,
-            type: "image/jpeg",
-            url: record.image,
-            uploadedAt: new Date(),
-            status: "success" as const,
+            webpPath: record.image,
+            originalSize: 0,
+            webpSize: 0,
+            compressionRatio: 0,
+            width: 0,
+            height: 0,
           });
         } else {
           console.log("DEBUG: No existing category image found");
@@ -655,37 +653,24 @@ export default function ServiceCategoryContainer() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Kategori Resmi
                   </label>
-                  <Upload
-                    preset="image"
+                  <WebPUploader
                     maxFiles={1}
-                    initialFiles={
-                      editingCategory?.image
-                        ? [
-                            {
-                              id: "existing-image",
-                              name: "Kategori Resmi",
-                              size: 0,
-                              type: "image/jpeg",
-                              url: editingCategory.image,
-                              uploadedAt: new Date(),
-                              status: "success" as const,
-                            },
-                          ]
-                        : []
-                    }
-                    onUpload={(files) => {
-                      if (files.length > 0) {
-                        setUploadedImage(files[0]);
+                    maxSize={5}
+                    quality={80}
+                    showStatistics={false}
+                    aspectRatio="16/9"
+                    autoConvert={true}
+                    onUploadComplete={(results) => {
+                      if (results.length > 0) {
+                        setUploadedImage(results[0]);
+                        setIsImageRemoved(false);
                       }
                     }}
-                    onRemove={() => {
-                      setUploadedImage(null);
-                    }}
-                    className="mb-4"
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-4"
                   />
 
                   {/* Image Preview */}
-                  {(uploadedImage?.url ||
+                  {(uploadedImage?.webpPath ||
                     (editingCategory?.image && !isImageRemoved)) && (
                     <div className="mt-4">
                       <div className="flex items-center justify-between mb-2">
@@ -707,7 +692,9 @@ export default function ServiceCategoryContainer() {
                       <div className="relative w-32 h-32 rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-50">
                         <Image
                           src={
-                            uploadedImage?.url || editingCategory?.image || ""
+                            uploadedImage?.webpPath ||
+                            editingCategory?.image ||
+                            ""
                           }
                           alt="Kategori resmi önizlemesi"
                           fill

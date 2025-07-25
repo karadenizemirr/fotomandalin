@@ -247,7 +247,7 @@ const LocationContainer = () => {
         type: "success",
       });
       setIsCreateModalOpen(false);
-      refetch();
+      
       resetForm();
     } catch (error: any) {
       console.error("DEBUG: Location creation failed:", error);
@@ -343,7 +343,7 @@ const LocationContainer = () => {
         type: "success",
       });
       setIsEditModalOpen(false);
-      refetch();
+      
       resetForm();
     } catch (error: any) {
       console.error("DEBUG: Location update failed:", error);
@@ -364,7 +364,7 @@ const LocationContainer = () => {
           type: "success",
         });
         setIsDeleteModalOpen(false);
-        refetch();
+        
       }
     } catch (error: any) {
       addToast({
@@ -382,7 +382,7 @@ const LocationContainer = () => {
         message: "Lokasyon durumu güncellendi",
         type: "success",
       });
-      refetch();
+      
     } catch (error: any) {
       addToast({
         message: error.message || "Durum güncellenirken bir hata oluştu",
@@ -429,14 +429,14 @@ const LocationContainer = () => {
   const columns = [
     {
       key: "name",
-      title: "Lokasyon Adı",
+      title: "Lokasyon",
       dataIndex: "name",
       sortable: true,
-      width: "200px",
+      width: "180px",
       render: (value: string, record: any) => (
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2 sm:space-x-3">
           {record.coverImage && (
-            <div className="w-8 h-8 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
               <Image
                 src={record.coverImage}
                 alt={value}
@@ -446,9 +446,11 @@ const LocationContainer = () => {
               />
             </div>
           )}
-          <div>
-            <p className="font-medium text-gray-900">{value}</p>
-            <p className="text-xs text-gray-500">#{record.slug}</p>
+          <div className="min-w-0 flex-1">
+            <p className="font-medium text-gray-900 text-sm sm:text-base truncate">
+              {value}
+            </p>
+            <p className="text-xs text-gray-500 truncate">#{record.slug}</p>
           </div>
         </div>
       ),
@@ -458,11 +460,14 @@ const LocationContainer = () => {
       title: "Adres",
       dataIndex: "address",
       sortable: true,
-      width: "250px",
+      width: "200px",
       render: (value: string) => (
-        <div className="flex items-center space-x-2">
-          <MapPin className="w-4 h-4 text-gray-400" />
-          <span className="text-sm text-gray-700 truncate" title={value}>
+        <div className="flex items-center space-x-1 sm:space-x-2">
+          <MapPin className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0" />
+          <span
+            className="text-xs sm:text-sm text-gray-700 truncate"
+            title={value}
+          >
             {value}
           </span>
         </div>
@@ -473,11 +478,11 @@ const LocationContainer = () => {
       title: "Ek Ücret",
       dataIndex: "extraFee",
       sortable: true,
-      width: "120px",
+      width: "100px",
       render: (value: number) => (
         <div className="flex items-center space-x-1">
-          <DollarSign className="w-4 h-4 text-green-500" />
-          <span className="text-sm font-medium text-gray-900">
+          <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 text-green-500 flex-shrink-0" />
+          <span className="text-xs sm:text-sm font-medium text-gray-900">
             {value > 0 ? `${value} ₺` : "Ücretsiz"}
           </span>
         </div>
@@ -485,14 +490,14 @@ const LocationContainer = () => {
     },
     {
       key: "maxBookingsPerDay",
-      title: "Günlük Kapasite",
+      title: "Kapasite",
       dataIndex: "maxBookingsPerDay",
       sortable: true,
-      width: "120px",
+      width: "80px",
       render: (value: number) => (
         <div className="flex items-center space-x-1">
-          <Calendar className="w-4 h-4 text-blue-500" />
-          <span className="text-sm text-gray-700">{value}</span>
+          <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500 flex-shrink-0" />
+          <span className="text-xs sm:text-sm text-gray-700">{value}</span>
         </div>
       ),
     },
@@ -500,11 +505,11 @@ const LocationContainer = () => {
       key: "workingHours",
       title: "Çalışma Saatleri",
       dataIndex: "workingHours",
-      width: "150px",
+      width: "120px",
       render: (value: any) => (
         <div className="flex items-center space-x-1">
-          <Clock className="w-4 h-4 text-orange-500" />
-          <span className="text-sm text-gray-700">
+          <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-orange-500 flex-shrink-0" />
+          <span className="text-xs sm:text-sm text-gray-700 truncate">
             {displayWorkingHours(value)}
           </span>
         </div>
@@ -512,14 +517,14 @@ const LocationContainer = () => {
     },
     {
       key: "sortOrder",
-      title: "Sıralama",
+      title: "Sıra",
       dataIndex: "sortOrder",
       sortable: true,
-      width: "100px",
+      width: "60px",
       render: (value: number) => (
         <div className="flex items-center space-x-1">
-          <Hash className="w-4 h-4 text-gray-400" />
-          <span className="text-sm text-gray-700">{value}</span>
+          <Hash className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0" />
+          <span className="text-xs sm:text-sm text-gray-700">{value}</span>
         </div>
       ),
     },
@@ -527,7 +532,7 @@ const LocationContainer = () => {
       key: "isActive",
       title: "Durum",
       dataIndex: "isActive",
-      width: "100px",
+      width: "80px",
       render: (value: boolean, record: any) => (
         <button
           onClick={() => handleToggleStatus(record)}
@@ -535,13 +540,17 @@ const LocationContainer = () => {
         >
           {value ? (
             <>
-              <ToggleRight className="w-5 h-5 text-green-500" />
-              <span className="text-xs text-green-600 font-medium">Aktif</span>
+              <ToggleRight className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 flex-shrink-0" />
+              <span className="text-xs text-green-600 font-medium hidden sm:inline">
+                Aktif
+              </span>
             </>
           ) : (
             <>
-              <ToggleLeft className="w-5 h-5 text-gray-400" />
-              <span className="text-xs text-gray-500 font-medium">Pasif</span>
+              <ToggleLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0" />
+              <span className="text-xs text-gray-500 font-medium hidden sm:inline">
+                Pasif
+              </span>
             </>
           )}
         </button>
@@ -573,11 +582,11 @@ const LocationContainer = () => {
   return (
     <div className="flex flex-col h-full bg-white">
       {/* Header */}
-      <div className="flex items-center justify-between p-6 border-b border-gray-200">
+      <div className="space-y-4 sm:space-y-0 sm:flex sm:items-center sm:justify-between p-4 sm:p-6 border-b border-gray-200">
         <div className="flex items-center space-x-3">
-          <MapPin className="w-8 h-8 text-orange-500" />
+          <MapPin className="w-6 h-6 sm:w-8 sm:h-8 text-orange-500 flex-shrink-0" />
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
               Lokasyon Yönetimi
             </h1>
             <p className="text-sm text-gray-600">
@@ -585,10 +594,10 @@ const LocationContainer = () => {
             </p>
           </div>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
           <button
             onClick={() => refetch()}
-            className="flex items-center space-x-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-colors"
+            className="flex items-center justify-center space-x-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
             <span>Yenile</span>
@@ -598,7 +607,7 @@ const LocationContainer = () => {
               resetForm();
               setIsCreateModalOpen(true);
             }}
-            className="flex items-center space-x-2 px-4 py-2 text-white bg-orange-500 border border-transparent rounded-lg hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-colors"
+            className="flex items-center justify-center space-x-2 px-4 py-2 text-white bg-orange-500 border border-transparent rounded-lg hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-colors"
           >
             <Plus className="w-4 h-4" />
             <span>Yeni Lokasyon</span>
@@ -607,26 +616,29 @@ const LocationContainer = () => {
       </div>
 
       {/* Content */}
-      <div className="flex-1 p-6">
-        <DataTable
-          data={filteredData}
-          columns={columns}
-          loading={isLoading}
-          actions={actions}
-          searchable
-          pagination={{
-            current: currentPage,
-            pageSize: pageSize,
-            total: locationsData?.pagination?.total || 0,
-            showSizeChanger: true,
-            pageSizeOptions: [10, 20, 50, 100],
-            onChange: (page, size) => {
-              setCurrentPage(page);
-              setPageSize(size);
-            },
-          }}
-          emptyText="Henüz lokasyon bulunmuyor"
-        />
+      <div className="flex-1 p-4 sm:p-6">
+        <div className="overflow-hidden">
+          <DataTable
+            data={filteredData}
+            columns={columns}
+            loading={isLoading}
+            actions={actions}
+            searchable
+            pagination={{
+              current: currentPage,
+              pageSize: pageSize,
+              total: locationsData?.pagination?.total || 0,
+              showSizeChanger: true,
+              pageSizeOptions: [10, 20, 50, 100],
+              onChange: (page, size) => {
+                setCurrentPage(page);
+                setPageSize(size);
+              },
+            }}
+            emptyText="Henüz lokasyon bulunmuyor"
+            className="overflow-x-auto"
+          />
+        </div>
       </div>
 
       {/* Create Modal */}
@@ -640,7 +652,7 @@ const LocationContainer = () => {
         size="lg"
       >
         <Form schema={locationCreateSchema} onSubmit={handleCreate}>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6">
             <div className="space-y-4">
               <TextField
                 name="name"
@@ -670,7 +682,7 @@ const LocationContainer = () => {
                 required
               />
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <NumberField
                   name="latitude"
                   label="Enlem (Latitude)"
@@ -708,7 +720,7 @@ const LocationContainer = () => {
                 required
               />
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <TextField
                   name="workingStartTime"
                   label="Başlangıç Saati"
@@ -784,28 +796,26 @@ const LocationContainer = () => {
           </div>
 
           {/* Submit Button */}
-          <div className="flex justify-end pt-6 border-t">
-            <div className="flex space-x-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsCreateModalOpen(false);
-                  resetForm();
-                }}
-                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
-              >
-                İptal
-              </button>
-              <button
-                type="submit"
-                disabled={createMutation.isPending}
-                className="px-6 py-2 text-white bg-orange-500 rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-              >
-                {createMutation.isPending
-                  ? "Oluşturuluyor..."
-                  : "Lokasyon Oluştur"}
-              </button>
-            </div>
+          <div className="flex flex-col sm:flex-row justify-end pt-6 border-t space-y-2 sm:space-y-0 sm:space-x-3">
+            <button
+              type="button"
+              onClick={() => {
+                setIsCreateModalOpen(false);
+                resetForm();
+              }}
+              className="w-full sm:w-auto px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
+            >
+              İptal
+            </button>
+            <button
+              type="submit"
+              disabled={createMutation.isPending}
+              className="w-full sm:w-auto px-6 py-2 text-white bg-orange-500 rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+            >
+              {createMutation.isPending
+                ? "Oluşturuluyor..."
+                : "Lokasyon Oluştur"}
+            </button>
           </div>
         </Form>
       </Dialog>
@@ -841,7 +851,7 @@ const LocationContainer = () => {
             }}
             onSubmit={handleUpdate}
           >
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6">
               <div className="space-y-4">
                 <TextField
                   name="name"
@@ -871,7 +881,7 @@ const LocationContainer = () => {
                   required
                 />
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <NumberField
                     name="latitude"
                     label="Enlem (Latitude)"
@@ -909,7 +919,7 @@ const LocationContainer = () => {
                   required
                 />
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <TextField
                     name="workingStartTime"
                     label="Başlangıç Saati"
@@ -984,29 +994,27 @@ const LocationContainer = () => {
             </div>
 
             {/* Submit Button */}
-            <div className="flex justify-end pt-6 border-t">
-              <div className="flex space-x-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsEditModalOpen(false);
-                    setSelectedLocation(null);
-                    resetForm();
-                  }}
-                  className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
-                >
-                  İptal
-                </button>
-                <button
-                  type="submit"
-                  disabled={updateMutation.isPending}
-                  className="px-6 py-2 text-white bg-orange-500 rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-                >
-                  {updateMutation.isPending
-                    ? "Güncelleniyor..."
-                    : "Değişiklikleri Kaydet"}
-                </button>
-              </div>
+            <div className="flex flex-col sm:flex-row justify-end pt-6 border-t space-y-2 sm:space-y-0 sm:space-x-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setSelectedLocation(null);
+                  resetForm();
+                }}
+                className="w-full sm:w-auto px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
+              >
+                İptal
+              </button>
+              <button
+                type="submit"
+                disabled={updateMutation.isPending}
+                className="w-full sm:w-auto px-6 py-2 text-white bg-orange-500 rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+              >
+                {updateMutation.isPending
+                  ? "Güncelleniyor..."
+                  : "Değişiklikleri Kaydet"}
+              </button>
             </div>
           </Form>
         )}

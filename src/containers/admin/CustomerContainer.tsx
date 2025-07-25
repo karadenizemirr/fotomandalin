@@ -188,30 +188,32 @@ const CustomerContainer = () => {
       title: "Müşteri",
       width: "250px",
       render: (value: any, record: any) => (
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold overflow-hidden">
+        <div className="flex items-center space-x-2 md:space-x-3">
+          <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold overflow-hidden flex-shrink-0">
             {record.image ? (
               <Image
                 src={record.image}
                 alt={record.name}
                 width={40}
                 height={40}
-                className="w-10 h-10 rounded-full object-cover"
+                className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover"
               />
             ) : (
               record.name?.charAt(0)?.toUpperCase() || "?"
             )}
           </div>
-          <div>
-            <div className="font-medium text-gray-900">{record.name}</div>
-            <div className="flex items-center space-x-1 text-sm text-gray-500">
-              <Mail className="w-3 h-3" />
-              <span>{record.email}</span>
+          <div className="min-w-0 flex-1">
+            <div className="font-medium text-gray-900 text-sm md:text-base truncate">
+              {record.name}
+            </div>
+            <div className="flex items-center space-x-1 text-xs md:text-sm text-gray-500">
+              <Mail className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">{record.email}</span>
             </div>
             {record.phone && (
-              <div className="flex items-center space-x-1 text-sm text-gray-500">
-                <Phone className="w-3 h-3" />
-                <span>{record.phone}</span>
+              <div className="flex items-center space-x-1 text-xs md:text-sm text-gray-500 md:hidden">
+                <Phone className="w-3 h-3 flex-shrink-0" />
+                <span className="truncate">{record.phone}</span>
               </div>
             )}
           </div>
@@ -228,6 +230,7 @@ const CustomerContainer = () => {
       key: "activity",
       title: "Aktivite",
       width: "150px",
+      hidden: "lg", // Sadece desktop'ta göster
       render: (value: any, record: any) => (
         <div className="space-y-1">
           <ActivityIndicator
@@ -245,6 +248,7 @@ const CustomerContainer = () => {
       key: "stats",
       title: "İstatistikler",
       width: "180px",
+      hidden: "md", // Tablet ve mobilde gizle
       render: (value: any, record: any) => (
         <div className="space-y-1">
           <div className="flex items-center space-x-2">
@@ -266,6 +270,7 @@ const CustomerContainer = () => {
       key: "joinDate",
       title: "Kayıt Tarihi",
       width: "120px",
+      hidden: "lg", // Sadece desktop'ta göster
       render: (value: any, record: any) => (
         <div className="text-sm text-gray-700">
           {new Date(record.createdAt).toLocaleDateString("tr-TR")}
@@ -309,22 +314,24 @@ const CustomerContainer = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col space-y-4 md:flex-row md:justify-between md:items-center md:space-y-0">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Müşteri Yönetimi</h1>
-          <p className="text-gray-600">
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900">
+            Müşteri Yönetimi
+          </h1>
+          <p className="text-sm md:text-base text-gray-600">
             Müşterileri görüntüleyin, düzenleyin ve yönetin
           </p>
         </div>
-        <div className="flex space-x-3">
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
           <button
             onClick={() => refetch()}
-            className="flex items-center space-x-2 px-4 py-2 text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
+            className="flex items-center justify-center space-x-2 px-4 py-2 text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
           >
             <RefreshCw className="w-4 h-4" />
             <span>Yenile</span>
           </button>
-          <button className="flex items-center space-x-2 px-4 py-2 text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200">
+          <button className="flex items-center justify-center space-x-2 px-4 py-2 text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200">
             <Download className="w-4 h-4" />
             <span>Dışa Aktar</span>
           </button>
@@ -333,62 +340,64 @@ const CustomerContainer = () => {
 
       {/* Stats Cards */}
       {userStats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white p-6 rounded-lg border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
+          <div className="bg-white p-4 lg:p-6 rounded-lg border border-gray-200">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+              <div className="mb-2 lg:mb-0">
+                <p className="text-xs lg:text-sm font-medium text-gray-600">
                   Toplam Müşteri
                 </p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-lg lg:text-2xl font-bold text-gray-900">
                   {userStats.totalUsers}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Users className="w-6 h-6 text-blue-600" />
+              <div className="w-8 h-8 lg:w-12 lg:h-12 bg-blue-100 rounded-lg flex items-center justify-center self-end lg:self-auto">
+                <Users className="w-4 h-4 lg:w-6 lg:h-6 text-blue-600" />
               </div>
             </div>
           </div>
-          <div className="bg-white p-6 rounded-lg border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Bu Ay Yeni</p>
-                <p className="text-2xl font-bold text-gray-900">
+          <div className="bg-white p-4 lg:p-6 rounded-lg border border-gray-200">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+              <div className="mb-2 lg:mb-0">
+                <p className="text-xs lg:text-sm font-medium text-gray-600">
+                  Bu Ay Yeni
+                </p>
+                <p className="text-lg lg:text-2xl font-bold text-gray-900">
                   {userStats.recentUsers}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-green-600" />
+              <div className="w-8 h-8 lg:w-12 lg:h-12 bg-green-100 rounded-lg flex items-center justify-center self-end lg:self-auto">
+                <TrendingUp className="w-4 h-4 lg:w-6 lg:h-6 text-green-600" />
               </div>
             </div>
           </div>
-          <div className="bg-white p-6 rounded-lg border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">
+          <div className="bg-white p-4 lg:p-6 rounded-lg border border-gray-200">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+              <div className="mb-2 lg:mb-0">
+                <p className="text-xs lg:text-sm font-medium text-gray-600">
                   Aktif Müşteri
                 </p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-lg lg:text-2xl font-bold text-gray-900">
                   {userStats.activeUsers}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Activity className="w-6 h-6 text-purple-600" />
+              <div className="w-8 h-8 lg:w-12 lg:h-12 bg-purple-100 rounded-lg flex items-center justify-center self-end lg:self-auto">
+                <Activity className="w-4 h-4 lg:w-6 lg:h-6 text-purple-600" />
               </div>
             </div>
           </div>
-          <div className="bg-white p-6 rounded-lg border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">
+          <div className="bg-white p-4 lg:p-6 rounded-lg border border-gray-200">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+              <div className="mb-2 lg:mb-0">
+                <p className="text-xs lg:text-sm font-medium text-gray-600">
                   Admin Sayısı
                 </p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-lg lg:text-2xl font-bold text-gray-900">
                   {userStats.totalAdmins}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <Crown className="w-6 h-6 text-yellow-600" />
+              <div className="w-8 h-8 lg:w-12 lg:h-12 bg-yellow-100 rounded-lg flex items-center justify-center self-end lg:self-auto">
+                <Crown className="w-4 h-4 lg:w-6 lg:h-6 text-yellow-600" />
               </div>
             </div>
           </div>
@@ -397,7 +406,7 @@ const CustomerContainer = () => {
 
       {/* Filters */}
       <div className="bg-white rounded-lg border border-gray-200 p-4">
-        <div className="flex items-center space-x-4">
+        <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
           <div className="flex items-center space-x-2">
             <Filter className="w-4 h-4 text-gray-500" />
             <span className="text-sm font-medium text-gray-700">
@@ -408,7 +417,7 @@ const CustomerContainer = () => {
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="px-3 py-1 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400"
+            className="w-full md:w-auto px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400"
           >
             <option value="all">Tüm Roller</option>
             <option value="CUSTOMER">Müşteri</option>
@@ -416,14 +425,14 @@ const CustomerContainer = () => {
             <option value="ADMIN">Admin</option>
           </select>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 flex-1">
             <Search className="w-4 h-4 text-gray-500" />
             <input
               type="text"
               placeholder="Müşteri ara..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="px-3 py-1 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400"
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400"
             />
           </div>
         </div>
@@ -524,51 +533,51 @@ const CustomerContainer = () => {
           size="lg"
         >
           <div className="space-y-6">
-            <div className="flex items-center space-x-4">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl overflow-hidden">
-                {selectedCustomer.image ? (
-                  <Image
-                    src={selectedCustomer.image}
-                    alt={selectedCustomer.name}
-                    width={64}
-                    height={64}
-                    className="w-16 h-16 rounded-full object-cover"
-                  />
-                ) : (
-                  selectedCustomer.name?.charAt(0)?.toUpperCase() || "?"
-                )}
-              </div>
-              <div className="flex-1">
-                <h3 className="text-xl font-semibold text-gray-900">
-                  {selectedCustomer.name}
-                </h3>
-                <div className="flex items-center space-x-4 mt-1">
-                  <RoleBadge role={selectedCustomer.role} />
-                  <ActivityIndicator
-                    bookings={selectedCustomer._count?.bookings || 0}
-                    reviews={selectedCustomer._count?.reviews || 0}
-                  />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex items-center space-x-4">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl overflow-hidden flex-shrink-0">
+                  {selectedCustomer.image ? (
+                    <Image
+                      src={selectedCustomer.image}
+                      alt={selectedCustomer.name}
+                      width={64}
+                      height={64}
+                      className="w-16 h-16 rounded-full object-cover"
+                    />
+                  ) : (
+                    selectedCustomer.name?.charAt(0)?.toUpperCase() || "?"
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-lg md:text-xl font-semibold text-gray-900 truncate">
+                    {selectedCustomer.name}
+                  </h3>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 mt-1 space-y-1 sm:space-y-0">
+                    <RoleBadge role={selectedCustomer.role} />
+                    <ActivityIndicator
+                      bookings={selectedCustomer._count?.bookings || 0}
+                      reviews={selectedCustomer._count?.reviews || 0}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
-                <h4 className="text-lg font-semibold text-gray-900">
+                <h4 className="text-base md:text-lg font-semibold text-gray-900">
                   İletişim Bilgileri
                 </h4>
 
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">
-                    <Mail className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm text-gray-700">
+                    <Mail className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                    <span className="text-sm text-gray-700 break-all">
                       {selectedCustomer.email}
                     </span>
                   </div>
 
                   {selectedCustomer.phone && (
                     <div className="flex items-center space-x-2">
-                      <Phone className="w-4 h-4 text-gray-500" />
+                      <Phone className="w-4 h-4 text-gray-500 flex-shrink-0" />
                       <span className="text-sm text-gray-700">
                         {selectedCustomer.phone}
                       </span>
@@ -576,7 +585,7 @@ const CustomerContainer = () => {
                   )}
 
                   <div className="flex items-center space-x-2">
-                    <Calendar className="w-4 h-4 text-gray-500" />
+                    <Calendar className="w-4 h-4 text-gray-500 flex-shrink-0" />
                     <span className="text-sm text-gray-700">
                       Kayıt:{" "}
                       {new Date(selectedCustomer.createdAt).toLocaleDateString(
@@ -586,47 +595,47 @@ const CustomerContainer = () => {
                   </div>
                 </div>
               </div>
+            </div>
 
-              <div className="space-y-4">
-                <h4 className="text-lg font-semibold text-gray-900">
-                  Aktivite Özeti
-                </h4>
+            <div className="space-y-4">
+              <h4 className="text-base md:text-lg font-semibold text-gray-900">
+                Aktivite Özeti
+              </h4>
 
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="w-5 h-5 text-blue-500" />
-                      <span className="text-sm font-medium text-blue-900">
-                        Rezervasyonlar
-                      </span>
-                    </div>
-                    <span className="text-lg font-bold text-blue-600">
-                      {selectedCustomer._count?.bookings || 0}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="w-5 h-5 text-blue-500" />
+                    <span className="text-sm font-medium text-blue-900">
+                      Rezervasyonlar
                     </span>
                   </div>
+                  <span className="text-lg font-bold text-blue-600">
+                    {selectedCustomer._count?.bookings || 0}
+                  </span>
+                </div>
 
-                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      <MessageSquare className="w-5 h-5 text-green-500" />
-                      <span className="text-sm font-medium text-green-900">
-                        Yorumlar
-                      </span>
-                    </div>
-                    <span className="text-lg font-bold text-green-600">
-                      {selectedCustomer._count?.reviews || 0}
+                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <MessageSquare className="w-5 h-5 text-green-500" />
+                    <span className="text-sm font-medium text-green-900">
+                      Yorumlar
                     </span>
                   </div>
+                  <span className="text-lg font-bold text-green-600">
+                    {selectedCustomer._count?.reviews || 0}
+                  </span>
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-end space-x-3 pt-4 border-t">
+            <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-4 border-t">
               <button
                 onClick={() => {
                   setIsDetailModalOpen(false);
                   setIsEditModalOpen(true);
                 }}
-                className="px-4 py-2 text-white bg-orange-500 rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
+                className="w-full sm:w-auto px-4 py-2 text-white bg-orange-500 rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
               >
                 Düzenle
               </button>

@@ -14,7 +14,9 @@ import {
   NumberField,
 } from "@/components/organisms/form/FormField";
 import { Dialog, ConfirmDialog } from "@/components/organisms/dialog";
-import Upload, { UploadedFile } from "@/components/organisms/upload/Upload";
+import WebPUploader, {
+  UploadResult,
+} from "@/components/organisms/upload/WebPUploader";
 import {
   Plus,
   Edit,
@@ -131,7 +133,7 @@ export default function PackageContainer() {
     limit: 20,
   });
   const [showFilters, setShowFilters] = useState(false);
-  const [uploadedImage, setUploadedImage] = useState<UploadedFile | null>(null);
+  const [uploadedImage, setUploadedImage] = useState<UploadResult | null>(null);
 
   // Toast hook
   const { addToast } = useToast();
@@ -157,7 +159,7 @@ export default function PackageContainer() {
         type: "success",
       });
       setIsModalOpen(false);
-      refetch();
+      
     },
     onError: (error: any) => {
       addToast({
@@ -177,7 +179,7 @@ export default function PackageContainer() {
       });
       setIsModalOpen(false);
       setEditingPackage(null);
-      refetch();
+      
     },
     onError: (error: any) => {
       addToast({
@@ -195,7 +197,7 @@ export default function PackageContainer() {
         message: "Paket başarıyla silindi",
         type: "success",
       });
-      refetch();
+      
     },
     onError: (error: any) => {
       addToast({
@@ -213,7 +215,7 @@ export default function PackageContainer() {
         message: "Paket başarıyla kopyalandı",
         type: "success",
       });
-      refetch();
+      
     },
     onError: (error: any) => {
       addToast({
@@ -285,9 +287,9 @@ export default function PackageContainer() {
 
       let imageUrl: string | undefined;
       if (uploadedImage) {
-        imageUrl = uploadedImage.url.startsWith("http")
-          ? uploadedImage.url
-          : `${baseUrl}${uploadedImage.url}`;
+        imageUrl = uploadedImage.webpPath.startsWith("http")
+          ? uploadedImage.webpPath
+          : `${baseUrl}${uploadedImage.webpPath}`;
       } else {
         // Eğer düzenleme modundaysa mevcut resmi kullan
         imageUrl = editingPackage?.coverImage || data.coverImage;
@@ -611,13 +613,12 @@ export default function PackageContainer() {
         if (record.coverImage && record.coverImage.trim() !== "") {
           console.log("DEBUG: Setting existing image:", record.coverImage);
           setUploadedImage({
-            id: "existing-image",
-            name: "Kapak Resmi",
-            size: 0,
-            type: "image/jpeg",
-            url: record.coverImage,
-            uploadedAt: new Date(),
-            status: "success" as const,
+            webpPath: record.coverImage,
+            originalSize: 0,
+            webpSize: 0,
+            compressionRatio: 0,
+            width: 0,
+            height: 0,
           });
         } else {
           console.log("DEBUG: No existing image found");
@@ -1045,37 +1046,23 @@ export default function PackageContainer() {
                   Kapak Resmi
                 </h3>
                 <div className="space-y-4">
-                  <Upload
-                    preset="image"
+                  <WebPUploader
                     maxFiles={1}
-                    initialFiles={
-                      editingPackage?.coverImage
-                        ? [
-                            {
-                              id: "existing-image",
-                              name: "Kapak Resmi",
-                              size: 0,
-                              type: "image/jpeg",
-                              url: editingPackage.coverImage,
-                              uploadedAt: new Date(),
-                              status: "success" as const,
-                            },
-                          ]
-                        : []
-                    }
-                    onUpload={(files) => {
-                      if (files.length > 0) {
-                        setUploadedImage(files[0]);
+                    maxSize={5}
+                    quality={80}
+                    showStatistics={false}
+                    aspectRatio="16/9"
+                    autoConvert={true}
+                    onUploadComplete={(results) => {
+                      if (results.length > 0) {
+                        setUploadedImage(results[0]);
                       }
                     }}
-                    onRemove={() => {
-                      setUploadedImage(null);
-                    }}
-                    className="mb-4"
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-4"
                   />
 
                   {/* Image Preview */}
-                  {(uploadedImage?.url || editingPackage?.coverImage) && (
+                  {(uploadedImage?.webpPath || editingPackage?.coverImage) && (
                     <div className="mt-4">
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Önizleme
@@ -1083,7 +1070,7 @@ export default function PackageContainer() {
                       <div className="relative w-32 h-32 rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-50">
                         <Image
                           src={
-                            uploadedImage?.url ||
+                            uploadedImage?.webpPath ||
                             editingPackage?.coverImage ||
                             ""
                           }

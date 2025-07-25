@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import FormInput from "@/components/molecules/FormInput";
 import FormCheckbox from "@/components/molecules/FormCheckbox";
-import Upload from "@/components/organisms/upload/Upload";
+import WebPUploader from "@/components/organisms/upload/WebPUploader";
 
 export default function SiteSettingsForm() {
   const { setValue, watch } = useFormContext();
@@ -177,65 +177,46 @@ export default function SiteSettingsForm() {
                 <div className="mb-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
                   <p className="text-xs text-gray-600 mb-2">Mevcut Logo:</p>
                   <div className="relative w-32 h-16 bg-white rounded border overflow-hidden">
-                    {/* S3 URL'leri için her zaman img tag kullan */}
                     <img
                       src={logoUrl}
                       alt="Site Logo"
                       className="w-full h-full object-contain p-2"
-                      onLoad={() => console.log(`Logo loaded: ${logoUrl}`)}
                       onError={(e) => {
-                        console.error(`Logo failed to load: ${logoUrl}`);
+                        console.error(`Logo yüklenemedi: ${logoUrl}`);
                         e.currentTarget.style.display = "none";
-                        // Fallback olarak placeholder göster - HTMLElement tipini açıkça belirt
-                        const placeholder = e.currentTarget.parentElement?.querySelector('.logo-placeholder') as HTMLElement;
-                        if (placeholder) placeholder.style.display = 'flex';
+                        const placeholder =
+                          e.currentTarget.parentElement?.querySelector(
+                            ".logo-placeholder"
+                          ) as HTMLElement;
+                        if (placeholder) placeholder.style.display = "flex";
                       }}
                     />
-                    {/* Fallback placeholder */}
                     <div
                       className="logo-placeholder absolute inset-0 flex items-center justify-center bg-gray-100 text-gray-400"
-                      style={{ display: 'none' }}
+                      style={{ display: "none" }}
                     >
                       <ImageIcon className="w-8 h-8" />
                     </div>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1 break-all">{logoUrl}</p>
-                  {/* URL Test Button */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      window.open(logoUrl, '_blank');
-                    }}
-                    className="mt-2 text-xs text-blue-600 hover:text-blue-800"
-                  >
-                    URL'yi Test Et
-                  </button>
                 </div>
               )}
 
-              <Upload
-                preset="image"
+              <WebPUploader
                 maxFiles={1}
-                config={{
-                  maxSize: 5 * 1024 * 1024, // 5MB
-                  allowedTypes: [
-                    "image/png",
-                    "image/jpeg",
-                    "image/svg+xml",
-                    "image/webp",
-                  ],
-                  uploadPath: "settings/logos", // S3'te özel klasör
-                }}
-                onUpload={(files) => {
-                  if (files.length > 0) {
-                    // Logo URL'yi form'a set et
-                    setValue("logo", files[0].url);
+                maxSize={5}
+                quality={85}
+                showStatistics={false}
+                aspectRatio="16/9"
+                autoConvert={true}
+                onUploadComplete={(results) => {
+                  if (results.length > 0) {
+                    setValue("logo", results[0].webpPath);
                   }
                 }}
-                className="w-full"
+                className="border-2 border-dashed border-gray-300 rounded-lg p-4"
               />
               <p className="text-xs text-gray-500 mt-1">
-                PNG, JPG, SVG veya WebP formatında, maksimum 5MB
+                Otomatik optimize edilir - PNG, JPG, SVG formatları desteklenir
               </p>
             </div>
 
@@ -249,81 +230,71 @@ export default function SiteSettingsForm() {
                 <div className="mb-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
                   <p className="text-xs text-gray-600 mb-2">Mevcut Favicon:</p>
                   <div className="relative w-8 h-8 bg-white rounded border overflow-hidden">
-                    {/* S3 URL'leri için her zaman img tag kullan */}
                     <img
                       src={faviconUrl}
                       alt="Site Favicon"
                       className="w-full h-full object-contain p-1"
-                      onLoad={() => console.log(`Favicon loaded: ${faviconUrl}`)}
                       onError={(e) => {
-                        console.error(`Favicon failed to load: ${faviconUrl}`);
+                        console.error(`Favicon yüklenemedi: ${faviconUrl}`);
                         e.currentTarget.style.display = "none";
-                        // Fallback olarak placeholder göster - HTMLElement tipini açıkça belirt
-                        const placeholder = e.currentTarget.parentElement?.querySelector('.favicon-placeholder') as HTMLElement;
-                        if (placeholder) placeholder.style.display = 'flex';
+                        const placeholder =
+                          e.currentTarget.parentElement?.querySelector(
+                            ".favicon-placeholder"
+                          ) as HTMLElement;
+                        if (placeholder) placeholder.style.display = "flex";
                       }}
                     />
-                    {/* Fallback placeholder */}
                     <div
                       className="favicon-placeholder absolute inset-0 flex items-center justify-center bg-gray-100 text-gray-400"
-                      style={{ display: 'none' }}
+                      style={{ display: "none" }}
                     >
                       <ImageIcon className="w-4 h-4" />
                     </div>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1 break-all">{faviconUrl}</p>
-                  {/* URL Test Button */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      window.open(faviconUrl, '_blank');
-                    }}
-                    className="mt-2 text-xs text-blue-600 hover:text-blue-800"
-                  >
-                    URL'yi Test Et
-                  </button>
                 </div>
               )}
 
-              <Upload
-                preset="image"
+              <WebPUploader
                 maxFiles={1}
-                config={{
-                  maxSize: 1 * 1024 * 1024, // 1MB
-                  allowedTypes: [
-                    "image/ico",
-                    "image/png",
-                    "image/jpeg",
-                    "image/svg+xml",
-                  ],
-                  uploadPath: "settings/favicons", // S3'te özel klasör
-                }}
-                onUpload={(files) => {
-                  if (files.length > 0) {
-                    // Favicon URL'yi form'a set et
-                    setValue("favicon", files[0].url);
+                maxSize={1}
+                quality={90}
+                showStatistics={false}
+                aspectRatio="1/1"
+                autoConvert={true}
+                onUploadComplete={(results) => {
+                  if (results.length > 0) {
+                    setValue("favicon", results[0].webpPath);
                   }
                 }}
-                className="w-full"
+                className="border-2 border-dashed border-gray-300 rounded-lg p-4"
               />
               <p className="text-xs text-gray-500 mt-1">
-                ICO, PNG, JPG veya SVG formatında, maksimum 1MB
+                Otomatik optimize edilir - ICO, PNG, JPG formatları desteklenir
               </p>
             </div>
           </div>
 
-          {/* Manual URL Input */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormInput
-              name="logo"
-              label="Logo URL (Manuel)"
-              placeholder="/images/logo.png"
-            />
-            <FormInput
-              name="favicon"
-              label="Favicon URL (Manuel)"
-              placeholder="/favicon.ico"
-            />
+          {/* Manuel URL Girişi */}
+          <div className="pt-4 border-t border-gray-200">
+            <h5 className="text-sm font-medium text-gray-700 mb-3">
+              Alternatif: Manuel URL Girişi
+            </h5>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormInput
+                name="logo"
+                label="Logo URL"
+                placeholder="https://example.com/logo.png"
+              />
+              <FormInput
+                name="favicon"
+                label="Favicon URL"
+                placeholder="https://example.com/favicon.ico"
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Yukarıdaki yükleme alanını kullanmanız önerilir. Manuel URL sadece
+              harici bağlantılar için kullanın.
+            </p>
           </div>
 
           {/* SEO Meta Tags */}

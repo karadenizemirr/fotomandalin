@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { S3UploadService } from '@/lib/s3-upload';
+import { ModernWebPService } from '@/lib/image/modern-webp-service';
 
 interface UploadConfig {
   maxSize?: number;
   allowedTypes?: string[];
   uploadPath?: string;
   generateThumbnail?: boolean;
+  convertToWebP?: boolean;
+  webpQuality?: number;
 }
 
 export async function POST(request: NextRequest) {
@@ -23,15 +26,63 @@ export async function POST(request: NextRequest) {
 
     const config: UploadConfig = configStr ? JSON.parse(configStr) : {};
     
-    // Convert file to buffer for S3 upload
     const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    let buffer = Buffer.from(bytes);
+    let finalFileName = file.name;
+    let finalMimeType = file.type;
+    let finalSize = file.size;
+    let webpMetadata: { width?: number; height?: number } = {};
 
-    // Validate file using S3 service
+    const shouldConvertToWebP = (config.convertToWebP !== false) && 
+                                file.type.startsWith('image/') && 
+                                !file.type.includes('svg') && 
+                                !file.type.includes('gif');
+
+    if (shouldConvertToWebP) {
+      try {
+        console.log(`🔄 Modern WebP dönüşümü başlatılıyor: ${file.name}`);
+        
+        const webpResult = await ModernWebPService.convertToWebP(buffer, {
+          quality: config.webpQuality || 80,
+          effort: 4,
+          lossless: false
+        });
+
+        console.log(`✅ Modern WebP dönüşümü tamamlandı:`, {
+          originalSize: `${(webpResult.originalSize / 1024).toFixed(2)}KB`,
+          webpSize: `${(webpResult.webpSize / 1024).toFixed(2)}KB`,
+          compression: `${webpResult.compressionRatio}%`,
+          metadata: webpResult.metadata
+        });
+        
+        buffer = Buffer.from(webpResult.webpBuffer);
+        finalSize = buffer.length;
+        
+        webpMetadata = {
+          width: webpResult.metadata?.width,
+          height: webpResult.metadata?.height
+        };
+        
+        const nameWithoutExt = finalFileName.substring(0, finalFileName.lastIndexOf('.'));
+        finalFileName = `${nameWithoutExt}.webp`;
+        finalMimeType = 'image/webp';
+
+        console.log(`🚀 Modern WebP optimizasyon sonuçları:`);
+        console.log(`   📁 Dosya: ${file.name} → ${finalFileName}`);
+        console.log(`   💾 Boyut: ${(file.size / (1024 * 1024)).toFixed(2)}MB → ${(finalSize / (1024 * 1024)).toFixed(2)}MB`);
+        console.log(`   📈 Kazanç: ${webpResult.compressionRatio}%`);
+        console.log(`   🖼️  Çözünürlük: ${webpMetadata.width}x${webpMetadata.height}`);
+      } catch (webpError) {
+        console.error(`❌ Modern WebP dönüşümü hatası: ${webpError}`);
+        console.error(`   📄 Dosya: ${file.name}`);
+        console.error(`   📝 Hata detayı:`, webpError);
+      }
+    }
+
     const validation = S3UploadService.validateFile(
       buffer,
-      file.name,
-      config.maxSize || 10 * 1024 * 1024 // 10MB default
+      finalFileName,
+      config.maxSize || 10 * 1024 * 1024
     );
 
     if (!validation.valid) {
@@ -41,11 +92,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Upload to S3
     const uploadResult = await S3UploadService.uploadFile(
       buffer,
-      file.name,
-      file.type,
+      finalFileName,
+      finalMimeType,
       config.uploadPath || 'uploads'
     );
 
@@ -56,18 +106,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Return success response with S3 URLs - Upload component'ine uygun format
     return NextResponse.json({
       success: true,
       file: {
-        id: uploadResult.key || `${Date.now()}_${Math.random()}`, // S3 key'i id olarak kullan
+        id: uploadResult.key || `${Date.now()}_${Math.random()}`,
         name: file.name,
-        size: file.size,
+        originalName: file.name,
+        finalName: finalFileName,
+        size: finalSize,
+        originalSize: file.size,
         type: file.type,
+        finalType: finalMimeType,
         url: uploadResult.url!,
         thumbnailUrl: uploadResult.thumbnailUrl || null,
         uploadedAt: new Date().toISOString(),
         status: 'success',
+        metadata: {
+          ...webpMetadata,
+          convertedToWebP: shouldConvertToWebP,
+          compressionRatio: shouldConvertToWebP 
+            ? Math.round((1 - (finalSize / file.size)) * 100)
+            : 0
+        }
       },
     });
 
@@ -83,7 +143,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// DELETE metodu - Upload component'inin deleteFile fonksiyonu için
 export async function DELETE(request: NextRequest) {
   try {
     const { url } = await request.json();
@@ -95,30 +154,24 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // URL'den S3 key'ini çıkar
     let key: string;
 
     if (url.includes(process.env.AWS_S3_BUCKET_URL || '')) {
-      // S3 URL'inden key'i çıkar
       const bucketUrl = process.env.AWS_S3_BUCKET_URL || '';
       key = url.replace(bucketUrl + '/', '');
     } else if (url.startsWith('http')) {
-      // Başka bir URL formatı ise hata döndür
       return NextResponse.json(
         { success: false, error: 'Geçersiz URL formatı' },
         { status: 400 }
       );
     } else {
-      // Zaten key formatında
       key = url;
     }
 
     console.log('Deleting S3 object with key:', key);
 
-    // S3'ten dosyayı sil
     const deleteResult = await S3UploadService.deleteFile(key);
 
-    // Thumbnail varsa onu da sil
     if (key.includes('/') && !key.includes('/thumbnails/')) {
       const pathParts = key.split('/');
       const folder = pathParts.slice(0, -1).join('/');
@@ -150,7 +203,6 @@ export async function DELETE(request: NextRequest) {
   }
 }
 
-// Handle preflight OPTIONS requests for CORS
 export async function OPTIONS(request: NextRequest) {
   return new NextResponse(null, {
     status: 200,

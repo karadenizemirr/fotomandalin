@@ -14,7 +14,9 @@ import {
   SelectField,
 } from "@/components/organisms/form/FormField";
 import { Dialog, ConfirmDialog } from "@/components/organisms/dialog";
-import Upload, { UploadedFile } from "@/components/organisms/upload/Upload";
+import WebPUploader, {
+  UploadResult,
+} from "@/components/organisms/upload/WebPUploader";
 import {
   Plus,
   Edit,
@@ -70,7 +72,7 @@ const StaffContainer = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<any>(null);
-  const [uploadedAvatar, setUploadedAvatar] = useState<UploadedFile | null>(
+  const [uploadedAvatar, setUploadedAvatar] = useState<UploadResult | null>(
     null
   );
 
@@ -140,9 +142,9 @@ const StaffContainer = () => {
 
       let avatarUrl: string | undefined;
       if (uploadedAvatar) {
-        avatarUrl = uploadedAvatar.url.startsWith("http")
-          ? uploadedAvatar.url
-          : `${baseUrl}${uploadedAvatar.url}`;
+        avatarUrl = uploadedAvatar.webpPath.startsWith("http")
+          ? uploadedAvatar.webpPath
+          : `${baseUrl}${uploadedAvatar.webpPath}`;
       }
 
       // URL formatını kontrol et
@@ -182,7 +184,6 @@ const StaffContainer = () => {
       setIsCreateModalOpen(false);
       setUploadedAvatar(null);
       setSelectedSpecialties([]);
-      refetch();
     } catch (error: any) {
       console.error("DEBUG: Staff creation failed:", error);
       addToast({
@@ -213,10 +214,10 @@ const StaffContainer = () => {
       let avatarUrl: string | undefined;
 
       // Yeni avatar yüklendiyse onu kullan
-      if (uploadedAvatar && uploadedAvatar.url) {
-        avatarUrl = uploadedAvatar.url.startsWith("http")
-          ? uploadedAvatar.url
-          : `${baseUrl}${uploadedAvatar.url}`;
+      if (uploadedAvatar && uploadedAvatar.webpPath) {
+        avatarUrl = uploadedAvatar.webpPath.startsWith("http")
+          ? uploadedAvatar.webpPath
+          : `${baseUrl}${uploadedAvatar.webpPath}`;
 
         console.log("DEBUG: Using new uploaded avatar:", avatarUrl);
       } else if (selectedStaff?.avatar) {
@@ -264,7 +265,6 @@ const StaffContainer = () => {
       setSelectedStaff(null);
       setSelectedSpecialties([]);
       setUploadedAvatar(null);
-      refetch();
     } catch (error: any) {
       console.error("DEBUG: Staff update failed:", error);
       addToast({
@@ -284,7 +284,6 @@ const StaffContainer = () => {
           type: "success",
         });
         setIsDeleteModalOpen(false);
-        refetch();
       }
     } catch (error: any) {
       addToast({
@@ -302,7 +301,6 @@ const StaffContainer = () => {
         message: "Personel durumu güncellendi",
         type: "success",
       });
-      refetch();
     } catch (error: any) {
       addToast({
         message: error.message || "Durum güncellenirken bir hata oluştu",
@@ -327,13 +325,12 @@ const StaffContainer = () => {
       try {
         new URL(staff.avatar);
         setUploadedAvatar({
-          id: "existing-avatar",
-          name: "existing-avatar",
-          url: staff.avatar,
-          size: 0,
-          type: "image/jpeg",
-          uploadedAt: new Date(),
-          status: "success" as const,
+          webpPath: staff.avatar,
+          width: 0,
+          height: 0,
+          originalSize: 0,
+          webpSize: 0,
+          compressionRatio: 0,
         });
         console.log("DEBUG: Set existing avatar to state:", staff.avatar);
       } catch (urlError) {
@@ -355,6 +352,7 @@ const StaffContainer = () => {
       title: "Fotoğraf",
       dataIndex: "avatar",
       width: "80px",
+      hidden: "sm", // Mobilde gizle
       render: (value: string, record: any) => (
         <div className="flex items-center justify-center">
           {value ? (
@@ -375,15 +373,35 @@ const StaffContainer = () => {
     },
     {
       key: "name",
-      title: "Personel Adı",
+      title: "Personel",
       dataIndex: "name",
       sortable: true,
       render: (value: string, record: any) => (
         <div className="space-y-1">
-          <div className="font-medium text-gray-900">{value}</div>
-          {record.title && (
-            <div className="text-sm text-gray-500">{record.title}</div>
-          )}
+          <div className="flex items-center space-x-2">
+            {/* Mobilde avatar'ı burada göster */}
+            <div className="sm:hidden flex-shrink-0">
+              {record.avatar ? (
+                <Image
+                  src={record.avatar}
+                  alt={record.name}
+                  width={32}
+                  height={32}
+                  className="rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                  <UserCheck className="w-4 h-4 text-gray-400" />
+                </div>
+              )}
+            </div>
+            <div>
+              <div className="font-medium text-gray-900">{value}</div>
+              {record.title && (
+                <div className="text-sm text-gray-500">{record.title}</div>
+              )}
+            </div>
+          </div>
         </div>
       ),
     },
@@ -391,6 +409,7 @@ const StaffContainer = () => {
       key: "contact",
       title: "İletişim",
       width: "200px",
+      hidden: "md", // Tablet ve mobilde gizle
       render: (value: any, record: any) => (
         <div className="space-y-1">
           <div className="flex items-center space-x-1">
@@ -410,6 +429,7 @@ const StaffContainer = () => {
       key: "location",
       title: "Lokasyon",
       width: "150px",
+      hidden: "lg", // Sadece desktop'ta göster
       render: (value: any, record: any) => (
         <div className="flex items-center space-x-1">
           <MapPin className="w-4 h-4 text-orange-500" />
@@ -423,6 +443,7 @@ const StaffContainer = () => {
       key: "experience",
       title: "Deneyim",
       width: "100px",
+      hidden: "lg", // Sadece desktop'ta göster
       render: (value: any, record: any) => (
         <div className="flex items-center space-x-1">
           <Award className="w-4 h-4 text-purple-500" />
@@ -434,8 +455,9 @@ const StaffContainer = () => {
     },
     {
       key: "specialties",
-      title: "Uzmanlık Alanları",
+      title: "Uzmanlık",
       width: "200px",
+      hidden: "lg", // Sadece desktop'ta göster
       render: (value: any, record: any) => (
         <div className="flex flex-wrap gap-1">
           {record.specialties && record.specialties.length > 0 ? (
@@ -464,6 +486,7 @@ const StaffContainer = () => {
       key: "bookings",
       title: "Rezervasyonlar",
       width: "120px",
+      hidden: "md", // Tablet ve mobilde gizle
       render: (value: any, record: any) => (
         <div className="flex items-center space-x-1">
           <Calendar className="w-4 h-4 text-blue-500" />
@@ -486,12 +509,14 @@ const StaffContainer = () => {
           {value ? (
             <>
               <ToggleRight className="w-5 h-5 text-green-500" />
-              <span className="text-green-600 font-medium">Aktif</span>
+              <span className="hidden sm:inline text-green-600 font-medium">
+                Aktif
+              </span>
             </>
           ) : (
             <>
               <ToggleLeft className="w-5 h-5 text-gray-400" />
-              <span className="text-gray-500">Pasif</span>
+              <span className="hidden sm:inline text-gray-500">Pasif</span>
             </>
           )}
         </button>
@@ -549,26 +574,26 @@ const StaffContainer = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col space-y-4 md:flex-row md:justify-between md:items-center md:space-y-0">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900">
             Personel Yönetimi
           </h1>
-          <p className="text-gray-600">
+          <p className="text-sm md:text-base text-gray-600">
             Fotoğraf çekimi personellerini yönetin
           </p>
         </div>
-        <div className="flex space-x-3">
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
           <button
             onClick={() => refetch()}
-            className="flex items-center space-x-2 px-4 py-2 text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
+            className="flex items-center justify-center space-x-2 px-4 py-2 text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
           >
             <RefreshCw className="w-4 h-4" />
             <span>Yenile</span>
           </button>
           <button
             onClick={() => setIsCreateModalOpen(true)}
-            className="flex items-center space-x-2 px-4 py-2 text-white bg-orange-500 rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
+            className="flex items-center justify-center space-x-2 px-4 py-2 text-white bg-orange-500 rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
           >
             <Plus className="w-4 h-4" />
             <span>Yeni Personel</span>
@@ -623,7 +648,7 @@ const StaffContainer = () => {
           }}
           onSubmit={handleCreate}
         >
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6">
             <div className="space-y-4">
               <TextField
                 name="name"
@@ -640,43 +665,45 @@ const StaffContainer = () => {
                 required
               />
 
-              <TextField
-                name="phone"
-                label="Telefon"
-                placeholder="0532 123 45 67"
-              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <TextField
+                  name="phone"
+                  label="Telefon"
+                  placeholder="0532 123 45 67"
+                />
 
-              <TextField
-                name="title"
-                label="Ünvan"
-                placeholder="Örn: Fotoğrafçı, Asistan"
-              />
+                <TextField
+                  name="title"
+                  label="Ünvan"
+                  placeholder="Örn: Fotoğrafçı, Asistan"
+                />
+              </div>
 
-              <NumberField
-                name="experience"
-                label="Deneyim (Yıl)"
-                placeholder="0"
-                min={0}
-              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <NumberField
+                  name="experience"
+                  label="Deneyim (Yıl)"
+                  placeholder="0"
+                  min={0}
+                />
 
-              <SelectField
-                name="primaryLocationId"
-                label="Lokasyon"
-                placeholder="Lokasyon seçin"
-                options={[
-                  { value: "", label: "Lokasyon seçin" },
-                  ...locationOptions,
-                ]}
-              />
+                <SelectField
+                  name="primaryLocationId"
+                  label="Lokasyon"
+                  placeholder="Lokasyon seçin"
+                  options={[
+                    { value: "", label: "Lokasyon seçin" },
+                    ...locationOptions,
+                  ]}
+                />
+              </div>
 
               <CheckboxField
                 name="isActive"
                 label="Aktif Durum"
                 helperText="Personelin aktif olup olmadığını belirler"
               />
-            </div>
 
-            <div className="space-y-4">
               <TextareaField
                 name="bio"
                 label="Biyografi"
@@ -688,16 +715,38 @@ const StaffContainer = () => {
                 <label className="text-sm font-medium text-gray-700">
                   Profil Fotoğrafı
                 </label>
-                <Upload
-                  multiple={false}
+                <WebPUploader
                   maxFiles={1}
-                  preset="avatar"
-                  onUpload={(files: UploadedFile[]) =>
-                    setUploadedAvatar(files[0] || null)
-                  }
-                  onRemove={() => setUploadedAvatar(null)}
-                  initialFiles={uploadedAvatar ? [uploadedAvatar] : []}
+                  maxSize={5}
+                  quality={80}
+                  aspectRatio="1/1"
+                  showStatistics={false}
+                  autoConvert={true}
+                  onUploadComplete={(results) => {
+                    if (results.length > 0) {
+                      setUploadedAvatar(results[0]);
+                    }
+                  }}
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-4"
                 />
+
+                {/* Avatar Preview */}
+                {uploadedAvatar?.webpPath && (
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Önizleme
+                    </label>
+                    <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-gray-200 bg-gray-50">
+                      <Image
+                        src={uploadedAvatar.webpPath}
+                        alt="Profil fotoğrafı önizlemesi"
+                        fill
+                        className="object-cover"
+                        sizes="64px"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -743,27 +792,25 @@ const StaffContainer = () => {
             </div>
 
             {/* Submit Button */}
-            <div className="flex justify-end pt-6 border-t">
-              <div className="flex space-x-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsCreateModalOpen(false);
-                    setUploadedAvatar(null);
-                    setSelectedSpecialties([]);
-                  }}
-                  className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
-                >
-                  İptal
-                </button>
-                <button
-                  type="submit"
-                  disabled={createMutation.isPending}
-                  className="px-6 py-2 text-white bg-orange-500 rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-                >
-                  {createMutation.isPending ? "Ekleniyor..." : "Personel Ekle"}
-                </button>
-              </div>
+            <div className="flex flex-col sm:flex-row justify-end pt-6 border-t space-y-2 sm:space-y-0 sm:space-x-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCreateModalOpen(false);
+                  setUploadedAvatar(null);
+                  setSelectedSpecialties([]);
+                }}
+                className="w-full sm:w-auto px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
+              >
+                İptal
+              </button>
+              <button
+                type="submit"
+                disabled={createMutation.isPending}
+                className="w-full sm:w-auto px-6 py-2 text-white bg-orange-500 rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+              >
+                {createMutation.isPending ? "Ekleniyor..." : "Personel Ekle"}
+              </button>
             </div>
           </div>
         </Form>
@@ -799,7 +846,7 @@ const StaffContainer = () => {
             }}
             onSubmit={handleUpdate}
           >
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6">
               <div className="space-y-4">
                 <TextField
                   name="name"
@@ -816,43 +863,45 @@ const StaffContainer = () => {
                   required
                 />
 
-                <TextField
-                  name="phone"
-                  label="Telefon"
-                  placeholder="0532 123 45 67"
-                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <TextField
+                    name="phone"
+                    label="Telefon"
+                    placeholder="0532 123 45 67"
+                  />
 
-                <TextField
-                  name="title"
-                  label="Ünvan"
-                  placeholder="Örn: Fotoğrafçı, Asistan"
-                />
+                  <TextField
+                    name="title"
+                    label="Ünvan"
+                    placeholder="Örn: Fotoğrafçı, Asistan"
+                  />
+                </div>
 
-                <NumberField
-                  name="experience"
-                  label="Deneyim (Yıl)"
-                  placeholder="0"
-                  min={0}
-                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <NumberField
+                    name="experience"
+                    label="Deneyim (Yıl)"
+                    placeholder="0"
+                    min={0}
+                  />
 
-                <SelectField
-                  name="primaryLocationId"
-                  label="Lokasyon"
-                  placeholder="Lokasyon seçin"
-                  options={[
-                    { value: "", label: "Lokasyon seçin" },
-                    ...locationOptions,
-                  ]}
-                />
+                  <SelectField
+                    name="primaryLocationId"
+                    label="Lokasyon"
+                    placeholder="Lokasyon seçin"
+                    options={[
+                      { value: "", label: "Lokasyon seçin" },
+                      ...locationOptions,
+                    ]}
+                  />
+                </div>
 
                 <CheckboxField
                   name="isActive"
                   label="Aktif Durum"
                   helperText="Personelin aktif olup olmadığını belirler"
                 />
-              </div>
 
-              <div className="space-y-4">
                 <TextareaField
                   name="bio"
                   label="Biyografi"
@@ -864,16 +913,42 @@ const StaffContainer = () => {
                   <label className="text-sm font-medium text-gray-700">
                     Profil Fotoğrafı
                   </label>
-                  <Upload
-                    multiple={false}
+                  <WebPUploader
                     maxFiles={1}
-                    preset="avatar"
-                    onUpload={(files: UploadedFile[]) =>
-                      setUploadedAvatar(files[0] || null)
-                    }
-                    onRemove={() => setUploadedAvatar(null)}
-                    initialFiles={uploadedAvatar ? [uploadedAvatar] : []}
+                    maxSize={5}
+                    quality={80}
+                    aspectRatio="1/1"
+                    showStatistics={false}
+                    autoConvert={true}
+                    onUploadComplete={(results) => {
+                      if (results.length > 0) {
+                        setUploadedAvatar(results[0]);
+                      }
+                    }}
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-4"
                   />
+
+                  {/* Avatar Preview */}
+                  {(uploadedAvatar?.webpPath || selectedStaff?.avatar) && (
+                    <div className="mt-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Mevcut Fotoğraf
+                      </label>
+                      <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-gray-200 bg-gray-50">
+                        <Image
+                          src={
+                            uploadedAvatar?.webpPath ||
+                            selectedStaff?.avatar ||
+                            ""
+                          }
+                          alt="Profil fotoğrafı"
+                          fill
+                          className="object-cover"
+                          sizes="64px"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -924,30 +999,28 @@ const StaffContainer = () => {
             </div>
 
             {/* Submit Button */}
-            <div className="flex justify-end pt-6 border-t">
-              <div className="flex space-x-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsEditModalOpen(false);
-                    setUploadedAvatar(null);
-                    setSelectedSpecialties([]);
-                    setSelectedStaff(null);
-                  }}
-                  className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
-                >
-                  İptal
-                </button>
-                <button
-                  type="submit"
-                  disabled={updateMutation.isPending}
-                  className="px-6 py-2 text-white bg-orange-500 rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-                >
-                  {updateMutation.isPending
-                    ? "Güncelleniyor..."
-                    : "Değişiklikleri Kaydet"}
-                </button>
-              </div>
+            <div className="flex flex-col sm:flex-row justify-end pt-6 border-t space-y-2 sm:space-y-0 sm:space-x-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setUploadedAvatar(null);
+                  setSelectedSpecialties([]);
+                  setSelectedStaff(null);
+                }}
+                className="w-full sm:w-auto px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
+              >
+                İptal
+              </button>
+              <button
+                type="submit"
+                disabled={updateMutation.isPending}
+                className="w-full sm:w-auto px-6 py-2 text-white bg-orange-500 rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+              >
+                {updateMutation.isPending
+                  ? "Güncelleniyor..."
+                  : "Değişiklikleri Kaydet"}
+              </button>
             </div>
           </Form>
         </Dialog>

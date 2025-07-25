@@ -14,6 +14,7 @@ import {
 } from "@/components/organisms/form/FormField";
 import { Dialog, ConfirmDialog } from "@/components/organisms/dialog";
 import Upload, { UploadedFile } from "@/components/organisms/upload/Upload";
+import WebPUploader from "@/components/organisms/upload/WebPUploader";
 import {
   Images,
   Plus,
@@ -71,6 +72,8 @@ const GalleryContainer = () => {
   const [featuredFilter, setFeaturedFilter] = useState<string>("all");
   const [uploadedCover, setUploadedCover] = useState<UploadedFile | null>(null);
   const [uploadedImages, setUploadedImages] = useState<UploadedFile[]>([]);
+  const [webpCoverResult, setWebpCoverResult] = useState<any>(null); // WebP dönüşüm sonucu
+  const [webpGalleryResults, setWebpGalleryResults] = useState<any[]>([]); // WebP galeri sonuçları
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
 
@@ -127,6 +130,8 @@ const GalleryContainer = () => {
   const resetUploadStates = () => {
     setUploadedCover(null);
     setUploadedImages([]);
+    setWebpCoverResult(null);
+    setWebpGalleryResults([]);
     setTags([]);
     setTagInput("");
   };
@@ -143,16 +148,16 @@ const GalleryContainer = () => {
     setTags(tags.filter((tag) => tag !== tagToRemove));
   };
 
-  // Handle form submission for create - Backend schema'ya uygun veri formatı
+  // Handle form submission for create - WebP results ile güncellendi
   const handleCreate = async (data: PortfolioFormData) => {
     console.log("DEBUG: Form submit triggered with data:", data);
-    console.log("DEBUG: Uploaded cover:", uploadedCover);
-    console.log("DEBUG: Uploaded images:", uploadedImages);
+    console.log("DEBUG: WebP cover result:", webpCoverResult);
+    console.log("DEBUG: WebP gallery results:", webpGalleryResults);
     console.log("DEBUG: Tags:", tags);
 
     try {
-      // Validate required fields
-      if (!uploadedCover) {
+      // Validate required fields - WebP sonuçlarını kontrol et
+      if (!webpCoverResult) {
         console.log("DEBUG: No cover image selected");
         addToast({
           message: "Kapak görseli seçmelisiniz",
@@ -161,14 +166,16 @@ const GalleryContainer = () => {
         return;
       }
 
-      // URL'lere BASE_URL ön eki ekle
+      // WebP URL'leri kullan - /uploads/ ile başlayan WebP paths
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
-      const coverImageUrl = uploadedCover.url.startsWith("http")
-        ? uploadedCover.url
-        : `${baseUrl}${uploadedCover.url}`;
+      const coverImageUrl = webpCoverResult.webpPath.startsWith("http")
+        ? webpCoverResult.webpPath
+        : `${baseUrl}${webpCoverResult.webpPath}`;
 
-      const galleryImageUrls = uploadedImages.map((img) =>
-        img.url.startsWith("http") ? img.url : `${baseUrl}${img.url}`
+      const galleryImageUrls = webpGalleryResults.map((result) =>
+        result.webpPath.startsWith("http")
+          ? result.webpPath
+          : `${baseUrl}${result.webpPath}`
       );
 
       // URL formatını kontrol et
@@ -187,7 +194,7 @@ const GalleryContainer = () => {
       const slug = createSlug(data.title);
       console.log("DEBUG: Generated slug:", slug);
 
-      // Backend schema'ya uygun veri formatı
+      // Backend schema'ya uygun veri formatı - WebP URLs ile
       const portfolioPayload = {
         title: data.title,
         slug,
@@ -200,17 +207,29 @@ const GalleryContainer = () => {
         location: data.location || undefined,
         metaTitle: data.metaTitle || undefined,
         metaDescription: data.metaDescription || undefined,
-        // eventDate'i string olarak gönder, backend'de transform edilecek
         eventDate: data.eventDate || undefined,
       };
 
       console.log("DEBUG: Portfolio payload to submit:", portfolioPayload);
+      console.log("DEBUG: WebP compression stats:", {
+        coverCompression: webpCoverResult.compressionRatio,
+        totalGalleryImages: webpGalleryResults.length,
+        avgCompression:
+          webpGalleryResults.length > 0
+            ? Math.round(
+                webpGalleryResults.reduce(
+                  (sum, r) => sum + r.compressionRatio,
+                  0
+                ) / webpGalleryResults.length
+              )
+            : 0,
+      });
 
       await createMutation.mutateAsync(portfolioPayload);
 
       console.log("DEBUG: Portfolio created successfully");
       addToast({
-        message: "Portfolio çalışması başarıyla oluşturuldu",
+        message: `Portfolio başarıyla oluşturuldu! ${webpCoverResult.compressionRatio}% boyut kazancı sağlandı.`,
         type: "success",
       });
       setIsCreateModalOpen(false);
@@ -407,6 +426,19 @@ const GalleryContainer = () => {
               unoptimized
               onError={(e) => {
                 console.error("Image failed to load:", record.coverImage);
+                console.error("Error event:", e);
+                // S3 URL'sini test et
+                fetch(record.coverImage, { method: "HEAD" })
+                  .then((response) => {
+                    console.log(
+                      "S3 HEAD response:",
+                      response.status,
+                      response.headers
+                    );
+                  })
+                  .catch((err) => {
+                    console.error("S3 fetch error:", err);
+                  });
                 e.currentTarget.src = "/placeholder-image.jpg";
               }}
             />
@@ -704,7 +736,7 @@ const GalleryContainer = () => {
         }}
         title="Yeni Portfolio Çalışması"
         description="Yeni bir çalışma ekleyin ve paylaşın"
-        size="xl"
+        className="min-w-5xl"
       >
         <Form
           schema={portfolioCreateSchema}
@@ -764,35 +796,25 @@ const GalleryContainer = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Kapak Görseli *
                   </label>
-                  <Upload
-                    preset="image"
-                    multiple={false}
-                    initialFiles={uploadedCover ? [uploadedCover] : []}
-                    onUpload={(files) => {
-                      if (files.length > 0) {
-                        setUploadedCover(files[0]);
-                        console.log("Cover image uploaded:", files[0]);
+                  <WebPUploader
+                    maxFiles={1}
+                    maxSize={15}
+                    quality={70}
+                    showStatistics={false}
+                    aspectRatio="16/9"
+                    autoConvert={true}
+                    onUploadComplete={(results) => {
+                      if (results.length > 0) {
+                        setWebpCoverResult(results[0]);
                       }
-                    }}
-                    onRemove={() => {
-                      setUploadedCover(null);
-                      console.log("Cover image removed");
                     }}
                     className="border-2 border-dashed border-gray-300 rounded-lg p-4"
                   />
-                  {uploadedCover && (
+                  {webpCoverResult && (
                     <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
                       <p className="text-sm text-green-700 flex items-center">
-                        <span className="mr-2">✓</span>
-                        Kapak görseli seçildi: {uploadedCover.name}
-                      </p>
-                    </div>
-                  )}
-                  {!uploadedCover && (
-                    <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-md">
-                      <p className="text-sm text-amber-700 flex items-center">
-                        <span className="mr-2">⚠️</span>
-                        Kapak görseli zorunludur
+                        <span className="mr-2">✅</span>
+                        Kapak görseli yüklendi
                       </p>
                     </div>
                   )}
@@ -803,39 +825,24 @@ const GalleryContainer = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Galeri Görselleri
                   </label>
-                  <Upload
-                    preset="image"
-                    multiple={true}
-                    maxFiles={20}
-                    initialFiles={uploadedImages}
-                    onUpload={(files) => {
-                      setUploadedImages(files);
-                      console.log("Gallery images uploaded:", files);
-                    }}
-                    onRemove={(file) => {
-                      setUploadedImages(
-                        uploadedImages.filter((img) => img.id !== file.id)
-                      );
-                      console.log("Gallery image removed:", file);
+                  <WebPUploader
+                    maxFiles={25}
+                    maxSize={20}
+                    quality={65}
+                    showStatistics={false}
+                    aspectRatio="4/3"
+                    autoConvert={true}
+                    onUploadComplete={(results) => {
+                      setWebpGalleryResults(results);
                     }}
                     className="border-2 border-dashed border-gray-300 rounded-lg p-4"
                   />
-                  {uploadedImages.length > 0 && (
+                  {webpGalleryResults.length > 0 && (
                     <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
                       <p className="text-sm text-green-700 flex items-center">
-                        <span className="mr-2">✓</span>
-                        {uploadedImages.length} görsel seçildi
+                        <span className="mr-2">✅</span>
+                        {webpGalleryResults.length} görsel yüklendi
                       </p>
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        {uploadedImages.map((img, index) => (
-                          <span
-                            key={index}
-                            className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded"
-                          >
-                            {img.name}
-                          </span>
-                        ))}
-                      </div>
                     </div>
                   )}
                 </div>
@@ -939,7 +946,7 @@ const GalleryContainer = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={createMutation.isPending || !uploadedCover}
+                  disabled={createMutation.isPending || !webpCoverResult}
                   className="px-6 py-2 text-white bg-orange-500 rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
                 >
                   {createMutation.isPending ? "Ekleniyor..." : "Çalışma Ekle"}

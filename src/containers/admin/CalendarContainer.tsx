@@ -281,8 +281,8 @@ const CalendarContainer = () => {
       <span
         className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${config.color}`}
       >
-        <IconComponent className="w-3 h-3 mr-1" />
-        {config.text}
+        <IconComponent className="w-3 h-3 mr-1 flex-shrink-0" />
+        <span className="truncate">{config.text}</span>
       </span>
     );
   };
@@ -304,8 +304,8 @@ const CalendarContainer = () => {
       <span
         className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${config.color}`}
       >
-        <CreditCard className="w-3 h-3 mr-1" />
-        {config.text}
+        <CreditCard className="w-3 h-3 mr-1 flex-shrink-0" />
+        <span className="truncate">{config.text}</span>
       </span>
     );
   };
@@ -314,11 +314,12 @@ const CalendarContainer = () => {
   const columns = [
     {
       key: "bookingCode",
-      title: "Rezervasyon Kodu",
+      title: "Kod",
       dataIndex: "bookingCode",
       sortable: true,
+      width: "120px",
       render: (value: string) => (
-        <span className="font-mono text-sm font-medium text-gray-900">
+        <span className="font-mono text-xs sm:text-sm font-medium text-gray-900 break-all">
           {value}
         </span>
       ),
@@ -330,18 +331,18 @@ const CalendarContainer = () => {
       render: (value: any, record: any) => (
         <div className="space-y-1">
           <div className="flex items-center space-x-2">
-            <User className="w-4 h-4 text-blue-500" />
-            <span className="font-medium text-gray-900">
+            <User className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500 flex-shrink-0" />
+            <span className="font-medium text-xs sm:text-sm text-gray-900 truncate">
               {record.customerName}
             </span>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="hidden sm:flex items-center space-x-2">
             <Mail className="w-3 h-3 text-gray-400" />
-            <span className="text-xs text-gray-600">
+            <span className="text-xs text-gray-600 truncate">
               {record.customerEmail}
             </span>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="hidden sm:flex items-center space-x-2">
             <Phone className="w-3 h-3 text-gray-400" />
             <span className="text-xs text-gray-600">
               {record.customerPhone}
@@ -353,35 +354,35 @@ const CalendarContainer = () => {
     {
       key: "package",
       title: "Paket",
-      width: "150px",
+      width: "120px",
       render: (value: any, record: any) => (
         <div className="flex items-center space-x-2">
-          <Package className="w-4 h-4 text-green-500" />
-          <span className="text-sm text-gray-700">{record.package?.name}</span>
+          <Package className="w-3 h-3 sm:w-4 sm:h-4 text-green-500 flex-shrink-0" />
+          <span className="text-xs sm:text-sm text-gray-700 truncate">
+            {record.package?.name}
+          </span>
         </div>
       ),
     },
     {
       key: "schedule",
-      title: "Tarih & Saat",
-      width: "180px",
+      title: "Tarih",
+      width: "140px",
       render: (value: any, record: any) => (
         <div className="space-y-1">
-          <div className="flex items-center space-x-2">
-            <Calendar className="w-4 h-4 text-purple-500" />
-            <span className="text-sm text-gray-700">
-              {new Date(record.startTime).toLocaleDateString("tr-TR")}
+          <div className="flex items-center space-x-1">
+            <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-purple-500 flex-shrink-0" />
+            <span className="text-xs sm:text-sm text-gray-700">
+              {new Date(record.startTime).toLocaleDateString("tr-TR", {
+                day: "2-digit",
+                month: "2-digit",
+              })}
             </span>
           </div>
-          <div className="flex items-center space-x-2">
-            <Clock className="w-4 h-4 text-orange-500" />
-            <span className="text-sm text-gray-700">
+          <div className="flex items-center space-x-1">
+            <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-orange-500 flex-shrink-0" />
+            <span className="text-xs sm:text-sm text-gray-700">
               {new Date(record.startTime).toLocaleTimeString("tr-TR", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}{" "}
-              -{" "}
-              {new Date(record.endTime).toLocaleTimeString("tr-TR", {
                 hour: "2-digit",
                 minute: "2-digit",
               })}
@@ -393,12 +394,12 @@ const CalendarContainer = () => {
     {
       key: "staff",
       title: "Personel",
-      width: "120px",
+      width: "100px",
       render: (value: any, record: any) => (
-        <div className="flex items-center space-x-2">
-          <UserCheck className="w-4 h-4 text-blue-500" />
-          <span className="text-sm text-gray-700">
-            {record.staff?.name || "Atanmamış"}
+        <div className="flex items-center space-x-1">
+          <UserCheck className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500 flex-shrink-0" />
+          <span className="text-xs sm:text-sm text-gray-700 truncate">
+            {record.staff?.name || "Yok"}
           </span>
         </div>
       ),
@@ -406,12 +407,12 @@ const CalendarContainer = () => {
     {
       key: "location",
       title: "Lokasyon",
-      width: "120px",
+      width: "100px",
       render: (value: any, record: any) => (
-        <div className="flex items-center space-x-2">
-          <MapPin className="w-4 h-4 text-red-500" />
-          <span className="text-sm text-gray-700">
-            {record.location?.name || "Belirtilmemiş"}
+        <div className="flex items-center space-x-1">
+          <MapPin className="w-3 h-3 sm:w-4 sm:h-4 text-red-500 flex-shrink-0" />
+          <span className="text-xs sm:text-sm text-gray-700 truncate">
+            {record.location?.name || "Yok"}
           </span>
         </div>
       ),
@@ -419,9 +420,9 @@ const CalendarContainer = () => {
     {
       key: "amount",
       title: "Tutar",
-      width: "100px",
+      width: "80px",
       render: (value: any, record: any) => (
-        <span className="font-medium text-gray-900">
+        <span className="font-medium text-xs sm:text-sm text-gray-900">
           ₺{Number(record.totalAmount).toLocaleString("tr-TR")}
         </span>
       ),
@@ -429,7 +430,7 @@ const CalendarContainer = () => {
     {
       key: "status",
       title: "Durum",
-      width: "120px",
+      width: "100px",
       render: (value: any, record: any) => (
         <StatusBadge status={record.status} />
       ),
@@ -437,7 +438,7 @@ const CalendarContainer = () => {
     {
       key: "paymentStatus",
       title: "Ödeme",
-      width: "120px",
+      width: "90px",
       render: (value: any, record: any) => (
         <PaymentStatusBadge status={record.paymentStatus} />
       ),
@@ -509,32 +510,34 @@ const CalendarContainer = () => {
   }, [staffData]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="space-y-4 sm:space-y-0 sm:flex sm:justify-between sm:items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
             Rezervasyon Yönetimi
           </h1>
-          <p className="text-gray-600">
+          <p className="text-sm sm:text-base text-gray-600">
             Rezervasyonları görüntüleyin, düzenleyin ve yönetin
           </p>
         </div>
-        <div className="flex space-x-3">
-          <button
-            onClick={() => refetch()}
-            className="flex items-center space-x-2 px-4 py-2 text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
-          >
-            <RefreshCw className="w-4 h-4" />
-            <span>Yenile</span>
-          </button>
-          <button className="flex items-center space-x-2 px-4 py-2 text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200">
-            <Download className="w-4 h-4" />
-            <span>Dışa Aktar</span>
-          </button>
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+          <div className="flex space-x-2 sm:space-x-3">
+            <button
+              onClick={() => refetch()}
+              className="flex items-center justify-center space-x-1 sm:space-x-2 px-3 sm:px-4 py-2 text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span className="hidden sm:inline">Yenile</span>
+            </button>
+            <button className="flex items-center justify-center space-x-1 sm:space-x-2 px-3 sm:px-4 py-2 text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200">
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Dışa Aktar</span>
+            </button>
+          </div>
           <button
             onClick={() => setIsCreateModalOpen(true)}
-            className="flex items-center space-x-2 px-4 py-2 text-white bg-orange-500 rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
+            className="flex items-center justify-center space-x-2 px-4 py-2 text-white bg-orange-500 rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200 w-full sm:w-auto"
           >
             <Plus className="w-4 h-4" />
             <span>Yeni Rezervasyon</span>
@@ -543,8 +546,8 @@ const CalendarContainer = () => {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg border border-gray-200 p-4">
-        <div className="flex items-center space-x-4">
+      <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+        <div className="space-y-3 sm:space-y-0 sm:flex sm:items-center sm:space-x-4">
           <div className="flex items-center space-x-2">
             <Filter className="w-4 h-4 text-gray-500" />
             <span className="text-sm font-medium text-gray-700">
@@ -552,60 +555,65 @@ const CalendarContainer = () => {
             </span>
           </div>
 
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-1 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400"
-          >
-            <option value="all">Tüm Durumlar</option>
-            <option value="PENDING">Bekliyor</option>
-            <option value="CONFIRMED">Onaylandı</option>
-            <option value="IN_PROGRESS">Devam Ediyor</option>
-            <option value="COMPLETED">Tamamlandı</option>
-            <option value="CANCELLED">İptal Edildi</option>
-          </select>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 flex-1">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400"
+            >
+              <option value="all">Tüm Durumlar</option>
+              <option value="PENDING">Bekliyor</option>
+              <option value="CONFIRMED">Onaylandı</option>
+              <option value="IN_PROGRESS">Devam Ediyor</option>
+              <option value="COMPLETED">Tamamlandı</option>
+              <option value="CANCELLED">İptal Edildi</option>
+            </select>
 
-          <select
-            value={locationFilter}
-            onChange={(e) => setLocationFilter(e.target.value)}
-            className="px-3 py-1 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400"
-          >
-            <option value="all">Tüm Lokasyonlar</option>
-            {locationOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            <select
+              value={locationFilter}
+              onChange={(e) => setLocationFilter(e.target.value)}
+              className="px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400"
+            >
+              <option value="all">Tüm Lokasyonlar</option>
+              {locationOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
 
-          <input
-            type="text"
-            placeholder="Rezervasyon ara..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="px-3 py-1 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400"
-          />
+            <input
+              type="text"
+              placeholder="Rezervasyon ara..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400"
+            />
+          </div>
         </div>
       </div>
 
       {/* Data Table */}
-      <div className="bg-white rounded-lg border border-gray-200">
-        <DataTable
-          data={filteredData}
-          columns={columns}
-          actions={actions}
-          loading={isLoading}
-          pagination={{
-            current: currentPage,
-            pageSize: pageSize,
-            total: filteredData.length,
-            onChange: (page, size) => {
-              setCurrentPage(page);
-              setPageSize(size || 10);
-            },
-          }}
-          emptyText="Henüz rezervasyon bulunmuyor"
-        />
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <DataTable
+            data={filteredData}
+            columns={columns}
+            actions={actions}
+            loading={isLoading}
+            pagination={{
+              current: currentPage,
+              pageSize: pageSize,
+              total: filteredData.length,
+              onChange: (page, size) => {
+                setCurrentPage(page);
+                setPageSize(size || 10);
+              },
+            }}
+            emptyText="Henüz rezervasyon bulunmuyor"
+            className="min-w-full"
+          />
+        </div>
       </div>
 
       {/* Create Modal */}
@@ -631,7 +639,7 @@ const CalendarContainer = () => {
           }}
           onSubmit={handleCreate}
         >
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6">
             <div className="space-y-4">
               <TextField
                 name="customerName"
@@ -711,21 +719,21 @@ const CalendarContainer = () => {
             </div>
 
             {/* Submit Button Section */}
-            <div className="col-span-1 lg:col-span-2 flex justify-end pt-6 border-t space-x-3">
+            <div className="flex flex-col sm:flex-row justify-end pt-6 border-t space-y-2 sm:space-y-0 sm:space-x-3">
               <button
                 type="button"
                 onClick={() => setIsCreateModalOpen(false)}
-                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
+                className="w-full sm:w-auto px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
               >
                 İptal
               </button>
               <button
                 type="submit"
                 disabled={createMutation.isPending}
-                className="px-6 py-2 text-white bg-orange-500 rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                className="w-full sm:w-auto px-6 py-2 text-white bg-orange-500 rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
               >
                 {createMutation.isPending ? (
-                  <div className="flex items-center">
+                  <div className="flex items-center justify-center">
                     <svg
                       className="animate-spin -ml-1 mr-3 h-4 w-4 text-white"
                       xmlns="http://www.w3.org/2000/svg"
@@ -746,7 +754,9 @@ const CalendarContainer = () => {
                         d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
                       ></path>
                     </svg>
-                    Rezervasyon oluşturuluyor...
+                    <span className="text-sm sm:text-base">
+                      Oluşturuluyor...
+                    </span>
                   </div>
                 ) : (
                   "Rezervasyon Oluştur"
@@ -788,7 +798,7 @@ const CalendarContainer = () => {
             }}
             onSubmit={handleUpdate}
           >
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6">
               <div className="space-y-4">
                 <TextField
                   name="customerName"
@@ -823,30 +833,32 @@ const CalendarContainer = () => {
                   required
                 />
 
-                <SelectField
-                  name="status"
-                  label="Rezervasyon Durumu"
-                  options={[
-                    { value: "PENDING", label: "Bekliyor" },
-                    { value: "CONFIRMED", label: "Onaylandı" },
-                    { value: "IN_PROGRESS", label: "Devam Ediyor" },
-                    { value: "COMPLETED", label: "Tamamlandı" },
-                    { value: "CANCELLED", label: "İptal Edildi" },
-                    { value: "RESCHEDULED", label: "Ertelendi" },
-                  ]}
-                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <SelectField
+                    name="status"
+                    label="Rezervasyon Durumu"
+                    options={[
+                      { value: "PENDING", label: "Bekliyor" },
+                      { value: "CONFIRMED", label: "Onaylandı" },
+                      { value: "IN_PROGRESS", label: "Devam Ediyor" },
+                      { value: "COMPLETED", label: "Tamamlandı" },
+                      { value: "CANCELLED", label: "İptal Edildi" },
+                      { value: "RESCHEDULED", label: "Ertelendi" },
+                    ]}
+                  />
 
-                <SelectField
-                  name="paymentStatus"
-                  label="Ödeme Durumu"
-                  options={[
-                    { value: "PENDING", label: "Bekliyor" },
-                    { value: "PAID", label: "Ödendi" },
-                    { value: "FAILED", label: "Başarısız" },
-                    { value: "REFUNDED", label: "İade Edildi" },
-                    { value: "PARTIAL", label: "Kısmi" },
-                  ]}
-                />
+                  <SelectField
+                    name="paymentStatus"
+                    label="Ödeme Durumu"
+                    options={[
+                      { value: "PENDING", label: "Bekliyor" },
+                      { value: "PAID", label: "Ödendi" },
+                      { value: "FAILED", label: "Başarısız" },
+                      { value: "REFUNDED", label: "İade Edildi" },
+                      { value: "PARTIAL", label: "Kısmi" },
+                    ]}
+                  />
+                </div>
               </div>
 
               <div className="space-y-4">
@@ -891,6 +903,52 @@ const CalendarContainer = () => {
                   rows={3}
                 />
               </div>
+
+              {/* Submit Button Section */}
+              <div className="flex flex-col sm:flex-row justify-end pt-6 border-t space-y-2 sm:space-y-0 sm:space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="w-full sm:w-auto px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
+                >
+                  İptal
+                </button>
+                <button
+                  type="submit"
+                  disabled={updateMutation.isPending}
+                  className="w-full sm:w-auto px-6 py-2 text-white bg-orange-500 rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                >
+                  {updateMutation.isPending ? (
+                    <div className="flex items-center justify-center">
+                      <svg
+                        className="animate-spin -ml-1 mr-3 h-4 w-4 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                        ></path>
+                      </svg>
+                      <span className="text-sm sm:text-base">
+                        Güncelleniyor...
+                      </span>
+                    </div>
+                  ) : (
+                    "Güncelle"
+                  )}
+                </button>
+              </div>
             </div>
           </Form>
         </Dialog>
@@ -908,48 +966,48 @@ const CalendarContainer = () => {
           <div className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900">
                   Müşteri Bilgileri
                 </h3>
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">
-                    <User className="w-4 h-4 text-blue-500" />
-                    <span className="text-sm font-medium">
+                    <User className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                    <span className="text-sm font-medium break-words">
                       {selectedBooking.customerName}
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Mail className="w-4 h-4 text-green-500" />
-                    <span className="text-sm">
+                    <Mail className="w-4 h-4 text-green-500 flex-shrink-0" />
+                    <span className="text-sm break-all">
                       {selectedBooking.customerEmail}
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Phone className="w-4 h-4 text-orange-500" />
+                    <Phone className="w-4 h-4 text-orange-500 flex-shrink-0" />
                     <span className="text-sm">
                       {selectedBooking.customerPhone}
                     </span>
                   </div>
                 </div>
 
-                <h3 className="text-lg font-semibold text-gray-900 mt-6">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mt-6">
                   Rezervasyon Bilgileri
                 </h3>
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">
-                    <Package className="w-4 h-4 text-purple-500" />
-                    <span className="text-sm">
+                    <Package className="w-4 h-4 text-purple-500 flex-shrink-0" />
+                    <span className="text-sm break-words">
                       {selectedBooking.package?.name}
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <MapPin className="w-4 h-4 text-red-500" />
+                    <MapPin className="w-4 h-4 text-red-500 flex-shrink-0" />
                     <span className="text-sm">
                       {selectedBooking.location?.name || "Belirtilmemiş"}
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <UserCheck className="w-4 h-4 text-blue-500" />
+                    <UserCheck className="w-4 h-4 text-blue-500 flex-shrink-0" />
                     <span className="text-sm">
                       {selectedBooking.staff?.name || "Atanmamış"}
                     </span>
@@ -958,12 +1016,12 @@ const CalendarContainer = () => {
               </div>
 
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900">
                   Tarih ve Saat
                 </h3>
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">
-                    <Calendar className="w-4 h-4 text-purple-500" />
+                    <Calendar className="w-4 h-4 text-purple-500 flex-shrink-0" />
                     <span className="text-sm">
                       {new Date(selectedBooking.startTime).toLocaleDateString(
                         "tr-TR",
@@ -976,7 +1034,7 @@ const CalendarContainer = () => {
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Clock className="w-4 h-4 text-orange-500" />
+                    <Clock className="w-4 h-4 text-orange-500 flex-shrink-0" />
                     <span className="text-sm">
                       {new Date(selectedBooking.startTime).toLocaleTimeString(
                         "tr-TR",
@@ -997,10 +1055,10 @@ const CalendarContainer = () => {
                   </div>
                 </div>
 
-                <h3 className="text-lg font-semibold text-gray-900 mt-6">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mt-6">
                   Durum Bilgileri
                 </h3>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">
                       Rezervasyon Durumu:
@@ -1015,7 +1073,7 @@ const CalendarContainer = () => {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Toplam Tutar:</span>
-                    <span className="text-lg font-bold text-gray-900">
+                    <span className="text-base sm:text-lg font-bold text-gray-900">
                       ₺
                       {Number(selectedBooking.totalAmount).toLocaleString(
                         "tr-TR"
@@ -1028,22 +1086,22 @@ const CalendarContainer = () => {
 
             {selectedBooking.specialNotes && (
               <div className="mt-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">
                   Özel Notlar
                 </h3>
-                <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
+                <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md break-words">
                   {selectedBooking.specialNotes}
                 </p>
               </div>
             )}
 
-            <div className="flex justify-end space-x-3 pt-4 border-t">
+            <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-4 border-t">
               <button
                 onClick={() => {
                   setIsDetailModalOpen(false);
                   setIsEditModalOpen(true);
                 }}
-                className="px-4 py-2 text-white bg-orange-500 rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
+                className="w-full sm:w-auto px-4 py-2 text-white bg-orange-500 rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors duration-200"
               >
                 Düzenle
               </button>

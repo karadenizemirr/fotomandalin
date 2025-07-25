@@ -71,28 +71,34 @@ export default function Upload({
         maxSize: 5 * 1024 * 1024, // 5MB
         allowedTypes: ["image/jpeg", "image/png", "image/webp", "image/gif"],
         uploadPath: "images",
+        convertToWebP: true, // 🆕 Otomatik WebP dönüşümü
+        webpQuality: 85, // 🆕 WebP kalitesi
       },
       avatar: {
         maxSize: 2 * 1024 * 1024, // 2MB
         allowedTypes: ["image/jpeg", "image/png", "image/webp"],
         uploadPath: "avatars",
+        convertToWebP: true, // 🆕 Avatar'lar için WebP
+        webpQuality: 90, // 🆕 Avatar için yüksek kalite
       },
       document: {
         maxSize: 10 * 1024 * 1024, // 10MB
         allowedTypes: ["application/pdf", "text/plain", "application/msword"],
         uploadPath: "documents",
+        convertToWebP: false, // 🆕 Dökümanlar için WebP yok
       },
       video: {
         maxSize: 50 * 1024 * 1024, // 50MB
         allowedTypes: ["video/mp4", "video/quicktime", "video/webm"],
         uploadPath: "videos",
+        convertToWebP: false, // 🆕 Videolar için WebP yok
       },
     };
 
     if (preset) {
       return { ...presets[preset], ...config };
     }
-    return config || {};
+    return { convertToWebP: true, webpQuality: 85, ...config }; // 🆕 Default WebP aktif
   }, [preset, config]);
 
   // Notify parent component when files change

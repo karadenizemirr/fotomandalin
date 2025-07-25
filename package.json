@@ -50,6 +50,7 @@
     "nodemailer": "^6.10.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "react-dropzone": "^14.3.8",
     "react-hook-form": "^7.60.0",
     "sharp": "^0.34.3",
     "superjson": "^2.2.2",
@@ -60,6 +61,8 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@types/imagemin": "^9.0.1",
+    "@types/imagemin-webp": "^7.0.3",
     "@types/iyzipay": "^2.0.3",
     "@types/node": "^20",
     "@types/react": "^19",

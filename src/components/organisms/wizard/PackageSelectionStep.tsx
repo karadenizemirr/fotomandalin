@@ -205,13 +205,17 @@ export default function PackageSelectionStep({
                   <div>
                     <div className="flex items-baseline space-x-2">
                       <span className="text-2xl font-bold text-gray-900">
-                        ₺{parseFloat(pkg.discountPrice).toLocaleString("tr-TR")}
+                        ₺
+                        {parseFloat(
+                          pkg.discountPrice || pkg.basePrice
+                        ).toLocaleString("tr-TR")}
                       </span>
-                      {pkg.discountPrice && (
-                        <span className="text-sm text-gray-500 line-through">
-                          ₺{parseFloat(pkg.basePrice).toLocaleString("tr-TR")}
-                        </span>
-                      )}
+                      {pkg.discountPrice &&
+                        pkg.discountPrice !== pkg.basePrice && (
+                          <span className="text-sm text-gray-500 line-through">
+                            ₺{parseFloat(pkg.basePrice).toLocaleString("tr-TR")}
+                          </span>
+                        )}
                     </div>
                     <p className="text-xs text-gray-500 mt-1">{pkg.currency}</p>
                   </div>

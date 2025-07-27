@@ -1,0 +1,52 @@
+# Fotomandalin - Fotoğraf Çekim Rezervasyon Sistemi
+# https://fotomandalin.com
+
+User-agent: *
+Allow: /
+
+# SEO-friendly sayfalar
+Allow: /packages
+Allow: /gallery
+Allow: /about
+Allow: /contact
+Allow: /blog
+
+# API ve admin sayfalarını engelle
+Disallow: /api/
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /_next/
+Disallow: /uploads/
+
+# Dinamik sayfa parametrelerini engelle
+Disallow: /*?*
+Disallow: /search?*
+
+# Geçici sayfalar
+Disallow: /temp/
+Disallow: /test/
+
+# Sitemap lokasyonu
+Sitemap: https://fotomandalin.com/sitemap.xml
+Sitemap: https://fotomandalin.com/sitemap-0.xml
+
+# Crawl delay (saniye)
+Crawl-delay: 1
+
+# Özel bot ayarları
+User-agent: Googlebot
+Allow: /api/auth/
+Crawl-delay: 0
+
+User-agent: Bingbot
+Crawl-delay: 2
+
+# Sosyal medya botları
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: Twitterbot
+Allow: /
+
+User-agent: LinkedInBot
+Allow: /

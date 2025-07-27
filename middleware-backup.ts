@@ -1,6 +1,5 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 
 export default withAuth(
   function middleware(req) {
@@ -8,29 +7,33 @@ export default withAuth(
     const token = req.nextauth.token;
     const userRole = token?.role;
 
-    // Create response first
-    let response = NextResponse.next();
-
-    // Add Cloudflare Cache Headers
+    // Cloudflare Cache Headers
+    const response = NextResponse.next();
+    
     // Static assets - Long cache
     if (pathname.match(/\.(jpg|jpeg|png|gif|svg|webp|ico|woff|woff2|ttf|eot|css|js)$/)) {
       response.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
       response.headers.set('CF-Cache-Tag', 'static-assets');
     }
+    
     // API routes - Short cache
     else if (pathname.startsWith('/api/')) {
       if (pathname.includes('/auth/') || pathname.includes('/admin/')) {
+        // No cache for auth and admin APIs
         response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
       } else {
+        // Short cache for public APIs
         response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=600');
         response.headers.set('CF-Cache-Tag', `api-${pathname.replace(/\//g, '-')}`);
       }
     }
+    
     // Public pages - Medium cache
     else if (!token && (pathname === '/' || pathname.startsWith('/packages') || pathname.startsWith('/gallery'))) {
       response.headers.set('Cache-Control', 'public, max-age=1800, s-maxage=3600');
       response.headers.set('CF-Cache-Tag', `page-${pathname.replace(/\//g, '-') || 'home'}`);
     }
+    
     // Private/Dynamic pages - No cache
     else if (pathname.startsWith('/dashboard') || pathname.startsWith('/booking') || token) {
       response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
@@ -103,17 +106,27 @@ export default withAuth(
       return NextResponse.redirect(url);
     }
 
-    // Return response with headers
-    return response;
+    return NextResponse.next();
   },
   {
     callbacks: {
       authorized: ({ token, req }) => {
         const { pathname } = req.nextUrl;
 
-        // API route'ları için özel kontrol
-        if (pathname.startsWith("/api/admin") ||
-            pathname.startsWith("/api/dashboard")) {
+        // Admin sayfaları için ADMIN rolü gerekli
+        if (pathname.startsWith("/dashboard") ||
+            pathname.startsWith("/analytics") ||
+            pathname.startsWith("/bookings") ||
+            pathname.startsWith("/calendar") ||
+            pathname.startsWith("/content") ||
+            pathname.startsWith("/customers") ||
+            pathname.startsWith("/finance") ||
+            pathname.startsWith("/gallery") ||
+            pathname.startsWith("/location") ||
+            pathname.startsWith("/messages") ||
+            pathname.startsWith("/packages") ||
+            pathname.startsWith("/settings") ||
+            pathname.startsWith("/staff")) {
           return token?.role === "ADMIN";
         }
 
@@ -126,7 +139,10 @@ export default withAuth(
 
         // Diğer sayfalar herkese açık
         return true;
-      },
+      }
+
+      // Return response with Cloudflare headers
+      return response;
     },
   }
 );
@@ -161,9 +177,6 @@ export const config = {
     "/profil/:path*",
 
     // API routes
-    "/api/:path*",
-
-    // Static assets için cache headers
-    "/((?!_next/static|_next/image|favicon.ico).*)",
+    "/api/:path*"
   ],
 };

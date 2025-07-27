@@ -1,3 +1,175 @@
+import { Metadata } from 'next'
+
+interface SEOProps {
+  title?: string
+  description?: string
+  keywords?: string[]
+  image?: string
+  url?: string
+  type?: 'website' | 'article' | 'profile'
+  author?: string
+  publishedTime?: string
+  modifiedTime?: string
+}
+
+const defaultMetadata = {
+  title: 'Fotomandalin - Profesyonel Fotoğraf Çekimi Rezervasyon Sistemi',
+  description: 'İstanbul\'da profesyonel fotoğraf çekimi için online rezervasyon yapın. Düğün, nişan, doğum günü, kurumsal etkinlik ve portre fotoğrafçılığı hizmetleri.',
+  keywords: [
+    'fotoğraf çekimi',
+    'profesyonel fotoğrafçı',
+    'düğün fotoğrafçısı',
+    'İstanbul fotoğrafçı',
+    'fotoğraf rezervasyon',
+    'portre fotoğrafçılığı',
+    'etkinlik fotoğrafçısı',
+    'nişan fotoğrafı',
+    'doğum günü fotoğrafı',
+    'kurumsal fotoğraf'
+  ],
+  siteUrl: 'https://fotomandalin.com',
+  siteName: 'Fotomandalin',
+  locale: 'tr_TR',
+  author: 'Fotomandalin',
+  twitterHandle: '@fotomandalin',
+  facebookPage: 'fotomandalin',
+  instagramHandle: '@fotomandalin'
+}
+
+export function generateSEOMetadata({
+  title,
+  description,
+  keywords = [],
+  image,
+  url,
+  type = 'website',
+  author,
+  publishedTime,
+  modifiedTime
+}: SEOProps = {}): Metadata {
+  const seoTitle = title 
+    ? `${title} | ${defaultMetadata.siteName}`
+    : defaultMetadata.title
+
+  const seoDescription = description || defaultMetadata.description
+  const seoKeywords = [...defaultMetadata.keywords, ...keywords]
+  const seoUrl = url || defaultMetadata.siteUrl
+  const seoImage = image || `${defaultMetadata.siteUrl}/images/og-default.jpg`
+
+  return {
+    title: seoTitle,
+    description: seoDescription,
+    keywords: seoKeywords.join(', '),
+    authors: [{ name: author || defaultMetadata.author }],
+    creator: defaultMetadata.author,
+    publisher: defaultMetadata.author,
+    
+    // Open Graph
+    openGraph: {
+      type,
+      locale: defaultMetadata.locale,
+      url: seoUrl,
+      siteName: defaultMetadata.siteName,
+      title: seoTitle,
+      description: seoDescription,
+      images: [
+        {
+          url: seoImage,
+          width: 1200,
+          height: 630,
+          alt: seoTitle,
+        }
+      ],
+      ...(publishedTime && { publishedTime }),
+      ...(modifiedTime && { modifiedTime }),
+    },
+
+    // Twitter Card
+    twitter: {
+      card: 'summary_large_image',
+      site: defaultMetadata.twitterHandle,
+      creator: defaultMetadata.twitterHandle,
+      title: seoTitle,
+      description: seoDescription,
+      images: [seoImage],
+    },
+
+    // Additional metadata
+    alternates: {
+      canonical: seoUrl,
+      languages: {
+        'tr-TR': seoUrl,
+      },
+    },
+
+    // Robots
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-video-preview': -1,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+      },
+    },
+
+    // Additional tags
+    other: {
+      'fb:app_id': '123456789', // Facebook App ID eklenecek
+      'application-name': defaultMetadata.siteName,
+      'apple-mobile-web-app-capable': 'yes',
+      'apple-mobile-web-app-status-bar-style': 'black-translucent',
+      'apple-mobile-web-app-title': defaultMetadata.siteName,
+      'format-detection': 'telephone=no',
+      'mobile-web-app-capable': 'yes',
+      'msapplication-TileColor': '#000000',
+      'msapplication-tap-highlight': 'no',
+      'theme-color': '#000000',
+    },
+  }
+}
+
+// Sayfa tipine göre önceden tanımlanmış SEO ayarları
+export const seoPresets = {
+  home: {
+    title: 'Ana Sayfa',
+    description: 'Profesyonel fotoğraf çekimi hizmetleri. Online rezervasyon yapın ve unutulmaz anlarınızı ölümsüzleştirin.',
+    keywords: ['ana sayfa', 'fotoğraf hizmetleri', 'online rezervasyon']
+  },
+  
+  packages: {
+    title: 'Fotoğraf Paketleri',
+    description: 'Farklı bütçelere uygun fotoğraf çekim paketlerini keşfedin. Düğün, nişan, portre ve etkinlik paketleri.',
+    keywords: ['fotoğraf paketleri', 'çekim paketleri', 'fiyatlar']
+  },
+  
+  gallery: {
+    title: 'Galeri',
+    description: 'Çektiğimiz fotoğraflara göz atın. Düğün, nişan, portre ve etkinlik fotoğraflarından örnekler.',
+    keywords: ['fotoğraf galerisi', 'örnek çalışmalar', 'portfolyo']
+  },
+  
+  about: {
+    title: 'Hakkımızda',
+    description: 'Fotomandalin ekibi ve hikayemiz. Profesyonel fotoğrafçılık deneyimimiz ve misyonumuz.',
+    keywords: ['hakkımızda', 'fotoğrafçı', 'deneyim', 'misyon']
+  },
+  
+  contact: {
+    title: 'İletişim',
+    description: 'Bizimle iletişime geçin. Fotoğraf çekimi rezervasyonu için arayın veya mesaj gönderin.',
+    keywords: ['iletişim', 'telefon', 'adres', 'randevu']
+  },
+  
+  booking: {
+    title: 'Rezervasyon',
+    description: 'Online fotoğraf çekimi rezervasyonu yapın. Tarih seçin, paket belirleyin ve hemen rezerve edin.',
+    keywords: ['rezervasyon', 'randevu', 'online booking', 'tarih seçimi']
+  }
+}
+
 export const seoConfigs = {
   home: {
     title: "Profesyonel Fotoğrafçılık Hizmetleri | Fotoğraf Mandalin",

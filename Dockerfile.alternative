@@ -3,60 +3,57 @@ FROM node:18-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
-# DNS ayarları ve gerekli paketler (resolv.conf'u değiştirmeden)
 RUN apk add --no-cache libc6-compat curl
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* ./
-# npm için registry ve timeout ayarları
+# npm için registry ve network ayarları
 RUN npm config set registry https://registry.npmmirror.com/ && \
+    npm config set prefer-online true && \
     npm config set fetch-timeout 300000 && \
     npm config set fetch-retries 10 && \
     npm config set fetch-retry-mintimeout 10000 && \
     npm config set fetch-retry-maxtimeout 60000 && \
-    npm ci --no-audit --no-fund && \
+    npm ci --no-audit --no-fund --verbose && \
     npm config set registry https://registry.npmjs.org/ && \
     npm cache clean --force
 
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
 
-# Build arguments for environment variables
+# Next.js telemetry'yi devre dışı bırak
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Build arguments
 ARG DATABASE_URL
 ARG NEXTAUTH_SECRET
 ARG NEXTAUTH_URL
 
-# Set environment variables for build
+# Environment variables for build
 ENV DATABASE_URL=${DATABASE_URL}
 ENV NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
 ENV NEXTAUTH_URL=${NEXTAUTH_URL}
 
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-
-# Generate Prisma Client
+# Prisma generate ve build
 RUN npx prisma generate
-
-# Next.js collects completely anonymous telemetry data about general usage.
-ENV NEXT_TELEMETRY_DISABLED 1
-
-# Build the application
 RUN npm run build
 
 # Production image, copy all the files and run next
 FROM base AS production
+RUN apk add --no-cache curl
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN apk add --no-cache curl
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy the standalone output
+# Copy built application
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
@@ -67,7 +64,7 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 RUN mkdir -p ./public/uploads && chown -R nextjs:nodejs ./public/uploads
 RUN chown -R nextjs:nodejs /app
 
-# Create health check endpoint
+# Health check file
 RUN echo '{"status":"ok","timestamp":"'$(date -Iseconds)'"}' > ./public/health.json
 
 USER nextjs
@@ -77,36 +74,25 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Add health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:3000/api/health || exit 1
-
-# server.js is created by next build from the standalone output
 CMD ["node", "server.js"]
 
-# --- Development stage for local development ---
-FROM node:18-alpine AS development
+# Development stage (for local development)
+FROM base AS development
+RUN apk add --no-cache libc6-compat curl git
 WORKDIR /app
-
-RUN apk add --no-cache libc6-compat
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
 
 # Copy package files
 COPY package.json package-lock.json* ./
-RUN npm install
+
+# Install all dependencies (including dev dependencies)
+RUN npm ci
 
 # Copy source code
 COPY . .
 
-# Create directories and set permissions
-RUN mkdir -p .next public/uploads && chown -R nextjs:nodejs .next public/uploads
-RUN chown -R nextjs:nodejs /app
+# Generate Prisma client
+RUN npx prisma generate
 
-# Switch to non-root user
-USER nextjs
-
-ENV NODE_ENV=development
 EXPOSE 3000
-CMD ["npm", "run", "dev"]
 
+CMD ["npm", "run", "dev"]

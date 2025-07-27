@@ -28,12 +28,19 @@ services:
         DATABASE_URL: ${DATABASE_URL:-postgresql://fotomandalin_user:fotomandalin_secure_password@postgres:5432/fotomandalin}
         NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-your-super-secure-secret-minimum-32-characters-long}
         NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      # DNS ayarları build için
+      network: host
     container_name: fotomandalin_web_prod
     restart: always
     env_file:
       - .env.production
     environment:
       - NODE_ENV=production
+    # Runtime DNS ayarları
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+      - 169.254.169.253  # AWS DNS
     command: ["node", "server.js"]
     ports:
       - "3000:3000"

@@ -3,12 +3,21 @@ FROM node:18-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
-RUN apk add --no-cache libc6-compat curl
+# DNS ayarları ve gerekli paketler
+RUN echo "nameserver 8.8.8.8" > /etc/resolv.conf && \
+    echo "nameserver 8.8.4.4" >> /etc/resolv.conf && \
+    apk add --no-cache libc6-compat curl
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* ./
-RUN npm ci && npm cache clean --force
+# npm için DNS ve registry ayarları (mirror kullanımı)
+RUN npm config set registry https://registry.npmmirror.com/ && \
+    npm config set fetch-timeout 120000 && \
+    npm config set fetch-retries 10 && \
+    npm ci && \
+    npm config set registry https://registry.npmjs.org/ && \
+    npm cache clean --force
 
 # Rebuild the source code only when needed
 FROM base AS builder

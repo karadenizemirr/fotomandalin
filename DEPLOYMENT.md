@@ -21,9 +21,57 @@ Bu rehber, Fotomandalin projesi için GitHub Actions kullanarak Amazon Linux EC2
 - **OS:** Amazon Linux 2023
 - **Security Group:** 22 (SSH), 80 (HTTP), 443 (HTTPS), 3000 (Node.js)
 
-### Domain ve DNS (İsteğe Bağlı)
+### Domain ve DNS (İsteğe Bağ## 📞 Destek ve Maintenance
 
-- Domain adı (örn: fotomandalin.com)
+### Container Durumu Kontrolü:
+
+```bash
+# Container'ları kontrol et
+docker compose -f docker-compose.prod.yml ps
+
+# Logları görüntüle
+docker compose -f docker-compose.prod.yml logs web
+docker compose -f docker-compose.prod.yml logs nginx
+docker compose -f docker-compose.prod.yml logs postgres
+
+# Resource kullanımı
+docker stats
+```
+
+### SSL Sertifikası Yenileme:
+
+```bash
+# Manuel yenileme test
+sudo certbot renew --dry-run
+
+# Otomatik yenileme kontrolü (crontab aktif mi?)
+sudo crontab -l
+
+# SSL sertifika durumu
+sudo certbot certificates
+```
+
+### Backup İşlemleri:
+
+```bash
+# Database backup
+docker compose -f docker-compose.prod.yml exec postgres pg_dump -U fotomandalin_user fotomandalin > backup_$(date +%Y%m%d).sql
+
+# Uploads backup
+tar -czf uploads_backup_$(date +%Y%m%d).tar.gz public/uploads/
+
+# SSL sertifikası backup
+sudo tar -czf ssl_backup_$(date +%Y%m%d).tar.gz /etc/letsencrypt/
+```
+
+### Deployment Sorunları İçin:
+
+1. Container loglarını kontrol edin
+2. Environment variables'ları doğrulayın
+3. Database bağlantısını test edin
+4. SSL sertifikası geçerliliğini kontrol edin
+5. GitHub Issues açın ve log çıktılarını paylaşınomain adı (örn: fotomandalin.com)
+
 - A record → EC2 Public IP
 
 ## 🚀 Adım Adım Kurulum
@@ -345,6 +393,13 @@ ping fotomandalin.com
 # Nginx'i durdurun (SSL kurulumu için)
 docker compose -f docker-compose.prod.yml stop nginx
 
+# Sistem nginx servisini durdurun (port çakışması önleme)
+sudo systemctl stop nginx
+sudo systemctl disable nginx
+
+# Port 80'in boş olduğunu kontrol edin
+sudo ss -tlnp | grep :80
+
 # Let's Encrypt sertifikası alın (domain'inizi değiştirin)
 sudo certbot certonly --standalone \
     --preferred-challenges http \
@@ -380,6 +435,29 @@ sudo crontab -e
 sudo certbot renew --dry-run
 ```
 
+#### ✅ HTTPS Test ve Doğrulama:
+
+```bash
+# Container'ları başlatın
+docker compose -f docker-compose.prod.yml up -d
+
+# SSL sertifikasının container'da mount edildiğini kontrol edin
+docker compose -f docker-compose.prod.yml exec nginx ls -la /etc/letsencrypt/live/fotomandalin.com/
+
+# Nginx config test
+docker compose -f docker-compose.prod.yml exec nginx nginx -t
+
+# HTTPS erişim test
+curl -I https://fotomandalin.com
+curl -I https://www.fotomandalin.com
+
+# HTTP'den HTTPS'e yönlendirme test
+curl -I http://fotomandalin.com
+
+# Nginx logları kontrol
+docker compose -f docker-compose.prod.yml logs nginx
+```
+
 #### .env.production Domain Güncellemesi:
 
 ```bash
@@ -389,6 +467,26 @@ nano .env.production
 # Aşağıdaki değerleri güncelleyin:
 # NEXTAUTH_URL=https://fotomandalin.com
 # NEXT_PUBLIC_APP_URL=https://fotomandalin.com
+```
+
+### 🔟 Domain ve SSL Kurulum Özeti
+
+SSL kurulumu tamamlandıktan sonra EC2'da çalıştırmanız gerekenler:
+
+```bash
+# 1. Container'ları başlatın
+docker compose -f docker-compose.prod.yml up -d
+
+# 2. .env.production dosyasını HTTPS URL'leri ile güncelleyin
+nano .env.production
+# NEXTAUTH_URL=https://fotomandalin.com
+# NEXT_PUBLIC_APP_URL=https://fotomandalin.com
+
+# 3. Container'ları yeniden başlatın
+docker compose -f docker-compose.prod.yml restart web
+
+# 4. HTTPS erişimini test edin
+curl -I https://fotomandalin.com
 ```
 
 ## 🔄 Otomatik Deployment
@@ -513,6 +611,38 @@ telnet your-ec2-ip 443
 docker compose -f docker-compose.prod.yml ps nginx
 ```
 
+#### 7. Port 80/443 Çakışması Hatası:
+
+**Hata:** `Could not bind TCP port 80 because it is already in use`
+
+```bash
+# Port 80 ve 443'ü kullanan processleri kontrol et
+sudo ss -tlnp | grep -E ':(80|443)'
+sudo netstat -tlnp | grep -E ':(80|443)'
+
+# Sistem nginx servisini durdur (eğer çalışıyorsa)
+sudo systemctl stop nginx
+sudo systemctl disable nginx
+
+# Apache servisini durdur (eğer varsa)
+sudo systemctl stop httpd
+sudo systemctl disable httpd
+
+# Docker container'lar dışındaki web serverları durdur
+sudo pkill -f nginx
+sudo pkill -f httpd
+
+# Port'ların boş olduğunu kontrol et
+sudo ss -tlnp | grep -E ':(80|443)'
+
+# Container'ları yeniden başlat
+docker compose -f docker-compose.prod.yml down
+docker compose -f docker-compose.prod.yml up -d
+
+# Container durumunu kontrol et
+docker compose -f docker-compose.prod.yml ps
+```
+
 ## 🔐 Güvenlik
 
 ### Firewall Kurulumu (Amazon Linux 2023):
@@ -585,6 +715,12 @@ nano .env.production
 # 4. Container'ları durdurun
 docker compose -f docker-compose.prod.yml down
 
+# 4.5. Sistem nginx/apache servislerini durdurun (port çakışması önleme)
+sudo systemctl stop nginx || true
+sudo systemctl stop httpd || true
+sudo systemctl disable nginx || true
+sudo systemctl disable httpd || true
+
 # 5. DNS propagation kontrol edin
 nslookup your-domain.com
 
@@ -602,12 +738,43 @@ docker compose -f docker-compose.prod.yml up -d
 curl -I https://your-domain.com
 ```
 
-### ✅ Başarılı Kurulum Sonrası:
+### ✅ Başarılı SSL Kurulumu Sonrası:
 
-- 🌐 `https://your-domain.com` adresinden erişilebilir
-- 🔒 SSL sertifikası aktif (Let's Encrypt)
+Artık siteniz şu şekilde erişilebilir:
+
+- 🌐 `https://fotomandalin.com` (Ana domain)
+- 🌐 `https://www.fotomandalin.com` (WWW subdomain)
+- 🔒 SSL sertifikası aktif (Let's Encrypt - 89 gün geçerli)
 - 🔄 HTTP'den HTTPS'e otomatik yönlendirme
 - ⚡ Nginx reverse proxy ile performans optimizasyonu
+
+### 📋 Final Kontrol Listesi:
+
+```bash
+# EC2'da final kontroller
+docker compose -f docker-compose.prod.yml ps
+curl -I https://fotomandalin.com
+curl -I http://fotomandalin.com  # 301 redirect beklenir
+sudo certbot certificates  # SSL durumu
+
+# Browser'da test edin:
+# https://fotomandalin.com
+# https://www.fotomandalin.com
+```
+
+### 🔧 .env.production Final Güncellemesi:
+
+```bash
+# EC2'da .env.production dosyasını HTTPS URL'leri ile güncelleyin
+nano .env.production
+
+# Bu değerleri güncelleyin:
+NEXTAUTH_URL=https://fotomandalin.com
+NEXT_PUBLIC_APP_URL=https://fotomandalin.com
+
+# Container'ları yeniden başlatın
+docker compose -f docker-compose.prod.yml restart web
+```
 
 ## �📞 Destek
 
@@ -620,11 +787,17 @@ Deployment sorunları için:
 
 ---
 
-**Son Güncelleme:** 26 Temmuz 2025 (Amazon Linux 2023 için optimize edildi)
+**Son Güncelleme:** 26 Temmuz 2025 (Amazon Linux 2023 + SSL kurulumu tamamlandı)
 
-Bu rehberi takip ederek Fotomandalin projenizi Amazon Linux EC2'de başarıyla deploy edebilirsiniz! 🎉
+🎉 **Fotomandalin Production Deployment Başarıyla Tamamlandı!**
 
-### 📝 Amazon Linux 2023 vs Ubuntu Farkları:
+✅ **Aktif URL'ler:**
+
+- Ana Site: https://fotomandalin.com
+- WWW: https://www.fotomandalin.com
+- SSL: Let's Encrypt (89 gün geçerli, otomatik yenileme aktif)
+
+### 📝 Amazon Linux 2023 vs Ubuntu Karşılaştırması:
 
 | Özellik              | Amazon Linux 2023 | Ubuntu 22.04 |
 | -------------------- | ----------------- | ------------ |

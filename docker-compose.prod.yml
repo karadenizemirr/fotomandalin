@@ -25,7 +25,7 @@ services:
       context: .
       target: production
       args:
-        DATABASE_URL: ${DATABASE_URL:-postgresql://fotomandalin_user:fotomandalin_secure_password@postgres:5432/fotomandalin}
+        DATABASE_URL: ${DATABASE_URL:-postgresql://fotomandalin_user:fotomandalin@postgres:5432/fotomandalin}
         NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-your-super-secure-secret-minimum-32-characters-long}
         NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
     container_name: fotomandalin_web_prod

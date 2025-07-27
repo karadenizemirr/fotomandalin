@@ -16,6 +16,16 @@ coverage
 # Production
 /build
 
+# Backup files
+*-backup.*
+*-backup
+middleware-backup.ts
+middleware-new.ts
+Dockerfile.backup
+Dockerfile.alternative
+Dockerfile.yarn
+*.backup
+
 # Misc
 .DS_Store
 *.pem
